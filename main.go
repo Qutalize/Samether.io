@@ -53,13 +53,12 @@ type StatePayload struct {
 	Foods  []FoodState  `json:"foods"`
 }
 
-// ★変更：マップを800x800の正方形に縮小
 const (
 	MaxCP          = 100.0
 	BaseSpeed      = 3.0
 	DashMultiplier = 2.5
 	FoodCount      = 40
-	MapWidth       = 800.0
+	MapWidth       = 800.0 // 800x800の正方形マップ
 	MapHeight      = 800.0
 )
 
@@ -102,7 +101,8 @@ func (c *Client) readPump() {
 		case "touch_input":
 			var input TouchInputPayload
 			if err := json.Unmarshal(base.Payload, &input); err == nil {
-				log.Printf("[Input] Client: %s | Angle: %6.2f | Dash: %v\n", c.id, input.Angle, input.IsDashing)
+				// 入力ログ (邪魔な場合はコメントアウトしてください)
+				// log.Printf("[Input] Client: %s | Angle: %6.2f | Dash: %v\n", c.id, input.Angle, input.IsDashing)
 				c.hub.input <- ClientInput{clientID: c.id, input: input}
 			}
 		}
@@ -155,6 +155,7 @@ func newHub() *Hub {
 		h.spawnFood()
 	}
 	
+	// ボットを4体生成
 	for i := 0; i < 4; i++ {
 		h.spawnBot()
 	}
@@ -255,6 +256,7 @@ func (h *Hub) run() {
 func (h *Hub) updateGame() {
 	// 1. 各サメの移動と通常エサの捕食
 	for _, shark := range h.sharks {
+		// ボットのAI
 		if shark.IsBot {
 			shark.Angle += (rand.Float64() - 0.5) * 0.3
 			if !shark.IsDashing && shark.CP > 80 && rand.Float64() < 0.05 {
@@ -264,6 +266,7 @@ func (h *Hub) updateGame() {
 			}
 		}
 
+		// スピードとCPの計算
 		speed := BaseSpeed
 		if shark.IsDashing && shark.CP > 0 {
 			speed *= DashMultiplier
@@ -277,12 +280,39 @@ func (h *Hub) updateGame() {
 			}
 		}
 
-		shark.X += math.Cos(shark.Angle) * speed
-		shark.Y += math.Sin(shark.Angle) * speed
+		// 移動計算
+		nextX := shark.X + math.Cos(shark.Angle)*speed
+		nextY := shark.Y + math.Sin(shark.Angle)*speed
 
-		shark.X = math.Max(shark.Radius, math.Min(MapWidth-shark.Radius, shark.X))
-		shark.Y = math.Max(shark.Radius, math.Min(MapHeight-shark.Radius, shark.Y))
+		// ★ 壁判定とボットの反射ロジック
+		if nextX < shark.Radius {
+			nextX = shark.Radius
+			if shark.IsBot {
+				shark.Angle = math.Pi - shark.Angle // 左右反転
+			}
+		} else if nextX > MapWidth-shark.Radius {
+			nextX = MapWidth - shark.Radius
+			if shark.IsBot {
+				shark.Angle = math.Pi - shark.Angle // 左右反転
+			}
+		}
 
+		if nextY < shark.Radius {
+			nextY = shark.Radius
+			if shark.IsBot {
+				shark.Angle = -shark.Angle // 上下反転
+			}
+		} else if nextY > MapHeight-shark.Radius {
+			nextY = MapHeight - shark.Radius
+			if shark.IsBot {
+				shark.Angle = -shark.Angle // 上下反転
+			}
+		}
+
+		shark.X = nextX
+		shark.Y = nextY
+
+		// エサの捕食判定
 		for id, food := range h.foods {
 			dx := shark.X - food.X
 			dy := shark.Y - food.Y
@@ -299,7 +329,7 @@ func (h *Hub) updateGame() {
 		}
 	}
 
-	// 2. サメ同士の衝突（頭が相手の体に当たったら死亡）
+	// 2. サメ同士の衝突（自分の鼻先が相手の体に入ったら死亡）
 	sharksList := make([]*SharkState, 0, len(h.sharks))
 	for _, s := range h.sharks {
 		sharksList = append(sharksList, s)
@@ -329,6 +359,7 @@ func (h *Hub) updateGame() {
 			s2HitsS1 := dist2To1 < s1.Radius
 
 			if s1HitsS2 && s2HitsS1 {
+				// 正面衝突
 				deadSharks[s1.ID] = true
 				deadSharks[s2.ID] = true
 				h.spawnFoodAt(s1.X, s1.Y, int(s1.Radius/2))
@@ -336,6 +367,7 @@ func (h *Hub) updateGame() {
 				log.Printf("[Game] Head-on collision! %s and %s died.", s1.ID, s2.ID)
 
 			} else if s1HitsS2 {
+				// s1が死亡
 				deadSharks[s1.ID] = true
 				s2.Score += 5
 				if s2.Radius < 150 {
@@ -345,6 +377,7 @@ func (h *Hub) updateGame() {
 				log.Printf("[Game] %s hit %s and died.", s1.ID, s2.ID)
 
 			} else if s2HitsS1 {
+				// s2が死亡
 				deadSharks[s2.ID] = true
 				s1.Score += 5
 				if s1.Radius < 150 {
