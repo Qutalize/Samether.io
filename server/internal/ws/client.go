@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"encoding/json"
 	"log"
 	"time"
 
@@ -22,6 +21,10 @@ type Client struct {
 	conn     *websocket.Conn
 	send     chan []byte // outbound frames
 	playerID string      // set after join; empty while not playing
+
+	lastStateTick int64
+	lastSharks map[string]StateSharkView
+	lastFoods map[string]StateFoodView
 }
 
 func (c *Client) readPump() {
@@ -29,6 +32,7 @@ func (c *Client) readPump() {
 		c.hub.unregister <- c
 		_ = c.conn.Close()
 	}()
+
 	c.conn.SetReadLimit(maxMsgSize)
 	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error {
@@ -45,11 +49,18 @@ func (c *Client) readPump() {
 			}
 			return
 		}
-		var env InboundEnvelope
-		if err := json.Unmarshal(raw, &env); err != nil {
+
+		// 新プロトコルで type を取得
+		typ, _, err := DecodeMessage(raw)
+		if err != nil {
 			continue
 		}
-		c.hub.inbound <- inboundMsg{client: c, raw: raw, typ: env.Type}
+
+		c.hub.inbound <- inboundMsg{
+			client: c,
+			raw:    raw,
+			typ:    typ,
+		}
 	}
 }
 
@@ -59,6 +70,7 @@ func (c *Client) writePump() {
 		ticker.Stop()
 		_ = c.conn.Close()
 	}()
+
 	for {
 		select {
 		case msg, ok := <-c.send:
@@ -70,6 +82,7 @@ func (c *Client) writePump() {
 			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				return
 			}
+
 		case <-ticker.C:
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {

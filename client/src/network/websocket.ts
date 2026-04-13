@@ -16,8 +16,17 @@ export class NetClient {
       ws.onerror = (e) => reject(e);
       ws.onmessage = (ev) => {
         try {
-          const msg = JSON.parse(ev.data) as ServerMsg;
-          for (const h of this.handlers) h(msg);
+          const raw = JSON.parse(ev.data);
+          if (
+            raw &&
+            typeof raw.type === "string" &&
+            raw.payload &&
+            typeof raw.payload === "object" &&
+            !Array.isArray(raw.payload)
+          ) {
+            const msg = raw as ServerMsg;
+            for (const h of this.handlers) h(msg);
+          }
         } catch {
           /* ignore malformed */
         }

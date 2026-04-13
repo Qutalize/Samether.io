@@ -78,7 +78,7 @@ export class HomeScreen extends Phaser.Scene {
     this.pendingName = name;
     try {
       if (!net.isOpen()) await net.connect();
-      net.send({ type: "join", name });
+      net.send({ type: "join", payload: { name } });
       this.scene.start("GameScene", { name });
     } catch (e) {
       console.error("connect failed", e);

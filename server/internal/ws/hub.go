@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"encoding/json"
 	"log"
 	"math/rand"
 	"net/http"
@@ -35,6 +34,7 @@ type Hub struct {
 func NewHub() *Hub {
 	w := game.NewWorld()
 	w.SpawnFoodsTo(game.FoodCount)
+
 	return &Hub{
 		world:       w,
 		leaderboard: game.NewLeaderboard(),
@@ -45,24 +45,29 @@ func NewHub() *Hub {
 	}
 }
 
-// ServeWS upgrades an HTTP request to WebSocket and starts the pumps.
 func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 4096,
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("upgrade: %v", err)
 		return
 	}
+
 	client := &Client{
 		hub:  h,
 		conn: conn,
 		send: make(chan []byte, 64),
+		lastSharks: make(map[string]StateSharkView),
+		lastFoods: make(map[string]StateFoodView),
 	}
+
 	h.register <- client
+
 	go client.writePump()
 	go client.readPump()
 }
@@ -77,13 +82,7 @@ func (h *Hub) allocBotID() string {
 	return "b" + itoa(n)
 }
 
-var botNames = []string{
-	"Sharky", "Finley", "Bruce", "Jawsome", "Nibbles",
-	"Chomper", "Tidal", "Riptide", "Splash", "DeepBlue",
-}
-
 func fmtPlayerID(n uint64) string {
-	// simple "pN" id is fine for PoC
 	return "p" + itoa(n)
 }
 
@@ -101,7 +100,6 @@ func itoa(n uint64) string {
 	return string(buf[i:])
 }
 
-// randomSpawn returns a safe starting position.
 func randomSpawn() game.Vec {
 	const margin = 150.0
 	return game.Vec{
@@ -110,14 +108,10 @@ func randomSpawn() game.Vec {
 	}
 }
 
-// sendJSON serializes v and pushes it to client's send channel.
-// Drops message if the channel is full (slow client).
-func (h *Hub) sendJSON(c *Client, v any) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		log.Printf("marshal: %v", err)
-		return
-	}
+// 新送信関数（Payload対応）
+func (h *Hub) send(c *Client, typ string, payload any) {
+	b := MustMarshal(typ, payload)
+
 	select {
 	case c.send <- b:
 	default:
@@ -125,8 +119,6 @@ func (h *Hub) sendJSON(c *Client, v any) {
 	}
 }
 
-// Run owns all game state and is the only goroutine that touches h.world,
-// h.clients, and h.leaderboard.
 func (h *Hub) Run() {
 	tick := time.NewTicker(time.Second / time.Duration(game.TickHz))
 	defer tick.Stop()
@@ -157,43 +149,46 @@ func (h *Hub) Run() {
 }
 
 func (h *Hub) handleInbound(m inboundMsg) {
-	switch m.typ {
+	typ, payload, err := DecodeMessage(m.raw)
+	if err != nil {
+		return
+	}
+
+	switch typ {
+
 	case "join":
-		var msg JoinMsg
-		if err := json.Unmarshal(m.raw, &msg); err != nil {
-			return
-		}
+		p := payload.(JoinPayload)
+
 		id := h.allocPlayerID()
 		m.client.playerID = id
-		s := game.NewShark(id, msg.Name, randomSpawn())
+
+		s := game.NewShark(id, p.Name, randomSpawn())
 		h.world.Sharks[id] = s
-		h.sendJSON(m.client, WelcomeMsg{
-			Type:     "welcome",
+
+		h.send(m.client, "welcome", WelcomePayload{
 			PlayerID: id,
 			WorldW:   game.WorldWidth,
 			WorldH:   game.WorldHeight,
 		})
-		
-		// Immediately send the current leaderboard to the new client
+
 		name, score, ok := h.leaderboard.Top()
 		if ok {
-			h.sendJSON(m.client, LeaderboardMsg{
-				Type:     "leaderboard",
+			h.send(m.client, "leaderboard", LeaderboardPayload{
 				TopName:  name,
 				TopScore: score,
 			})
 		}
+
 	case "input":
-		var msg InputMsg
-		if err := json.Unmarshal(m.raw, &msg); err != nil {
-			return
-		}
+		p := payload.(InputPayload)
+
 		s, ok := h.world.Sharks[m.client.playerID]
 		if !ok || !s.Alive {
 			return
 		}
-		s.TargetAngle = msg.Angle
-		if msg.Dash {
+
+		s.TargetAngle = p.Angle
+		if p.Dash {
 			s.DashUntilTick = h.world.Tick + int64(float64(game.TickHz)*game.DashDurationSec)
 		}
 	}
@@ -202,37 +197,17 @@ func (h *Hub) handleInbound(m inboundMsg) {
 func (h *Hub) step(dt float64) {
 	h.world.Tick++
 
-	// 0. Update bots and spawn new ones if needed.
 	h.world.UpdateBots()
+
 	for len(h.world.Sharks) < game.MinPopulation {
 		id := h.allocBotID()
-
-		// Try to find an unused bot name
-		usedNames := make(map[string]bool)
-		for _, s := range h.world.Sharks {
-			usedNames[s.Name] = true
-		}
-
-		name := ""
-		// Try up to 10 times to pick a random unused name
-		for i := 0; i < 10; i++ {
-			cand := botNames[rand.Intn(len(botNames))]
-			if !usedNames[cand] {
-				name = cand
-				break
-			}
-		}
-		// Fallback if all names are used or random selection failed
-		if name == "" {
-			name = "Bot" + id
-		}
+		name := "Bot" + id
 
 		s := game.NewShark(id, name, randomSpawn())
 		s.IsBot = true
 		h.world.Sharks[id] = s
 	}
 
-	// 1. Move sharks.
 	for _, s := range h.world.Sharks {
 		if !s.Alive {
 			continue
@@ -241,19 +216,16 @@ func (h *Hub) step(dt float64) {
 		s.Move(dt, dash)
 	}
 
-	// 2. Wall deaths.
 	wallDead := h.world.CheckWallDeaths()
-	// 3. Shark collisions.
 	sharkDead := h.world.CheckSharkCollisions()
-	// 4. Eat foods.
 	_ = h.world.ConsumeFoods()
-	// 5. Stage growth.
+
 	for _, s := range h.world.Sharks {
 		if s.Alive {
 			s.UpdateStage()
 		}
 	}
-	// 6. Scatter dead sharks and notify owners, then remove them.
+
 	allDead := append(wallDead, sharkDead...)
 	for _, id := range allDead {
 		s := h.world.Sharks[id]
@@ -265,22 +237,18 @@ func (h *Hub) step(dt float64) {
 		delete(h.world.Sharks, id)
 	}
 
-	// 7. Replenish food.
 	h.world.SpawnFoodsTo(game.FoodCount)
 
-	// 8. Update leaderboard.
 	h.leaderboard.BeginTick()
 	for id, s := range h.world.Sharks {
-		if !s.Alive {
-			continue
+		if s.Alive {
+			h.leaderboard.Record(id, s.Name, s.XP)
 		}
-		h.leaderboard.Record(id, s.Name, s.XP)
 	}
 	if h.leaderboard.EndTick() {
 		h.broadcastLeaderboard()
 	}
 
-	// 9. Broadcast state to every connected client.
 	for c := range h.clients {
 		h.sendStateTo(c)
 	}
@@ -289,12 +257,11 @@ func (h *Hub) step(dt float64) {
 func (h *Hub) notifyDeath(playerID string, s *game.Shark) {
 	for c := range h.clients {
 		if c.playerID == playerID {
-			h.sendJSON(c, DeathMsg{
-				Type:  "death",
+			h.send(c, "death", DeathPayload{
 				Score: s.XP,
-				Stage: s.Stage + 1, // UI shows 1-based stage
+				Stage: s.Stage + 1,
 			})
-			c.playerID = "" // can rejoin
+			c.playerID = ""
 			return
 		}
 	}
@@ -305,26 +272,38 @@ func (h *Hub) broadcastLeaderboard() {
 	if !ok {
 		return
 	}
-	msg := LeaderboardMsg{
-		Type:     "leaderboard",
-		TopName:  name,
-		TopScore: score,
-	}
+
 	for c := range h.clients {
-		h.sendJSON(c, msg)
+		h.send(c, "leaderboard", LeaderboardPayload{
+			TopName:  name,
+			TopScore: score,
+		})
 	}
+}
+
+func sharkViewEqual(a, b StateSharkView) bool {
+	return a.ID == b.ID && a.Name == b.Name && a.X == b.X && a.Y == b.Y && a.Angle == b.Angle && a.Stage == b.Stage
+}
+
+func foodViewEqual(a, b StateFoodView) bool {
+	return a.ID == b.ID && a.X == b.X && a.Y == b.Y && a.IsRed == b.IsRed
 }
 
 func (h *Hub) sendStateTo(c *Client) {
 	self := h.world.Sharks[c.playerID]
+
 	if self == nil {
-		// Not playing — send an empty state so the client stays fresh.
-		h.sendJSON(c, StateMsg{
-			Type:   "state",
-			Tick:   h.world.Tick,
+		payload := StatePayload{
+			Tick: h.world.Tick,
+			Full: true,
+			You:  StateYou{},
 			Sharks: []StateSharkView{},
 			Foods:  []StateFoodView{},
-		})
+		}
+		h.send(c, "state", payload)
+		c.lastStateTick = h.world.Tick
+		c.lastSharks = map[string]StateSharkView{}
+		c.lastFoods = map[string]StateFoodView{}
 		return
 	}
 
@@ -333,34 +312,41 @@ func (h *Hub) sendStateTo(c *Client) {
 		radius = game.VisibilityStage5
 	}
 
-	sharks := make([]StateSharkView, 0, 8)
+	currentSharkMap := make(map[string]StateSharkView, 8)
+	currentSharks := make([]StateSharkView, 0, 8)
 	for _, s := range h.world.Sharks {
-		if !s.Alive {
+		if !s.Alive || s.Head.Dist(self.Head) > radius {
 			continue
 		}
-		if s.Head.Dist(self.Head) > radius {
-			continue
-		}
-		sharks = append(sharks, StateSharkView{
+		view := StateSharkView{
 			ID:    s.ID,
 			Name:  s.Name,
 			X:     s.Head.X,
 			Y:     s.Head.Y,
 			Angle: s.Angle,
 			Stage: s.Stage,
-		})
+		}
+		currentSharks = append(currentSharks, view)
+		currentSharkMap[view.ID] = view
 	}
 
-	foods := make([]StateFoodView, 0, 64)
+	currentFoodMap := make(map[string]StateFoodView, 64)
+	currentFoods := make([]StateFoodView, 0, 64)
 	for _, f := range h.world.Foods {
 		if f.Pos.Dist(self.Head) > radius {
 			continue
 		}
-		foods = append(foods, StateFoodView{ID: f.ID, X: f.Pos.X, Y: f.Pos.Y, IsRed: f.IsRed})
+		view := StateFoodView{
+			ID:    f.ID,
+			X:     f.Pos.X,
+			Y:     f.Pos.Y,
+			IsRed: f.IsRed,
+		}
+		currentFoods = append(currentFoods, view)
+		currentFoodMap[view.ID] = view
 	}
 
-	h.sendJSON(c, StateMsg{
-		Type: "state",
+	payload := StatePayload{
 		Tick: h.world.Tick,
 		You: StateYou{
 			ID:    self.ID,
@@ -369,7 +355,42 @@ func (h *Hub) sendStateTo(c *Client) {
 			XP:    self.XP,
 			Stage: self.Stage,
 		},
-		Sharks: sharks,
-		Foods:  foods,
-	})
+	}
+
+	if c.lastStateTick == 0 {
+		payload.Full = true
+		payload.Sharks = currentSharks
+		payload.Foods = currentFoods
+	} else {
+		for id, current := range currentSharkMap {
+			if prev, ok := c.lastSharks[id]; !ok {
+				payload.AddedSharks = append(payload.AddedSharks, current)
+			} else if !sharkViewEqual(prev, current) {
+				payload.UpdatedSharks = append(payload.UpdatedSharks, current)
+			}
+		}
+		for id := range c.lastSharks {
+			if _, ok := currentSharkMap[id]; !ok {
+				payload.RemovedSharks = append(payload.RemovedSharks, id)
+			}
+		}
+
+		for id, current := range currentFoodMap {
+			if prev, ok := c.lastFoods[id]; !ok {
+				payload.AddedFoods = append(payload.AddedFoods, current)
+			} else if !foodViewEqual(prev, current) {
+				payload.UpdatedFoods = append(payload.UpdatedFoods, current)
+			}
+		}
+		for id := range c.lastFoods {
+			if _, ok := currentFoodMap[id]; !ok {
+				payload.RemovedFoods = append(payload.RemovedFoods, id)
+			}
+		}
+	}
+
+	h.send(c, "state", payload)
+	c.lastStateTick = h.world.Tick
+	c.lastSharks = currentSharkMap
+	c.lastFoods = currentFoodMap
 }

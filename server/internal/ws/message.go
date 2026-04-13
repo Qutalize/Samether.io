@@ -1,30 +1,78 @@
 package ws
 
-// --- Client → Server ---
+import "encoding/json"
 
-type InboundEnvelope struct {
-	Type string `json:"type"`
+// ============================================================
+// 共通ラッパー（新プロトコル）
+// ============================================================
+
+type BaseMessage struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
 }
 
-type JoinMsg struct {
-	Type string `json:"type"` // "join"
+// ============================================================
+// 基本型（既存流用）
+// ============================================================
+
+type Point struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+// ============================================================
+// --- Client → Server Payload ---
+// ============================================================
+
+type JoinPayload struct {
 	Name string `json:"name"`
 }
 
-type InputMsg struct {
-	Type  string  `json:"type"` // "input"
+type InputPayload struct {
 	Angle float64 `json:"angle"`
 	Dash  bool    `json:"dash"`
 }
 
-// --- Server → Client ---
+// ============================================================
+// --- Server → Client Payload ---
+// ============================================================
 
-type WelcomeMsg struct {
-	Type     string  `json:"type"` // "welcome"
+type WelcomePayload struct {
 	PlayerID string  `json:"playerId"`
 	WorldW   float64 `json:"worldW"`
 	WorldH   float64 `json:"worldH"`
 }
+
+type StatePayload struct {
+	Tick int64 `json:"tick"`
+	You StateYou `json:"you"`
+	Full bool `json:"full,omitempty"`
+
+	Sharks []StateSharkView `json:"sharks,omitempty"`
+	Foods []StateFoodView `json:"foods,omitempty"`
+
+	AddedSharks []StateSharkView `json:"addedSharks,omitempty"`
+	UpdatedSharks []StateSharkView `json:"updatedSharks,omitempty"`
+	RemovedSharks []string `json:"removedSharks,omitempty"`
+
+	AddedFoods []StateFoodView `json:"addedFoods,omitempty"`
+	UpdatedFoods []StateFoodView `json:"updatedFoods,omitempty"`
+	RemovedFoods []string `json:"removedFoods,omitempty"`
+}
+
+type DeathPayload struct {
+	Score int `json:"score"`
+	Stage int `json:"stage"`
+}
+
+type LeaderboardPayload struct {
+	TopName  string `json:"topName"`
+	TopScore int    `json:"topScore"`
+}
+
+// ============================================================
+// --- 既存View構造（互換維持）
+// ============================================================
 
 type StateSharkView struct {
 	ID    string  `json:"id"`
@@ -43,29 +91,74 @@ type StateFoodView struct {
 }
 
 type StateYou struct {
-	ID    string `json:"id"`
+	ID    string  `json:"id"`
 	X     float64 `json:"x"`
 	Y     float64 `json:"y"`
-	XP    int    `json:"xp"`
-	Stage int    `json:"stage"`
+	XP    int     `json:"xp"`
+	Stage int     `json:"stage"`
 }
 
-type StateMsg struct {
-	Type   string           `json:"type"` // "state"
-	Tick   int64            `json:"tick"`
-	You    StateYou         `json:"you"`
-	Sharks []StateSharkView `json:"sharks"`
-	Foods  []StateFoodView  `json:"foods"`
+// ============================================================
+// --- ユーティリティ（新プロトコル）
+// ============================================================
+
+func mustRaw(v any) json.RawMessage {
+	b, _ := json.Marshal(v)
+	return b
 }
 
-type DeathMsg struct {
-	Type  string `json:"type"` // "death"
-	Score int    `json:"score"`
-	Stage int    `json:"stage"`
+func MustMarshal(msgType string, payload any) []byte {
+	msg, _ := json.Marshal(BaseMessage{
+		Type:    msgType,
+		Payload: mustRaw(payload),
+	})
+	return msg
 }
 
-type LeaderboardMsg struct {
-	Type     string `json:"type"` // "leaderboard"
-	TopName  string `json:"topName"`
-	TopScore int    `json:"topScore"`
+// ============================================================
+// --- 受信デコード（新）
+// ============================================================
+
+func DecodeMessage(data []byte) (string, any, error) {
+	var base BaseMessage
+	if err := json.Unmarshal(data, &base); err != nil {
+		return "", nil, err
+	}
+
+	switch base.Type {
+	case "join":
+		var p JoinPayload
+		if err := json.Unmarshal(base.Payload, &p); err != nil {
+			return "", nil, err
+		}
+		return base.Type, p, nil
+	case "input":
+		var p InputPayload
+		if err := json.Unmarshal(base.Payload, &p); err != nil {
+			return "", nil, err
+		}
+		return base.Type, p, nil
+	default:
+		return base.Type, base.Payload, nil
+	}
+}
+
+// ============================================================
+// --- 送信ヘルパー
+// ============================================================
+
+func EncodeState(state StatePayload) []byte {
+	return MustMarshal("state", state)
+}
+
+func EncodeWelcome(w WelcomePayload) []byte {
+	return MustMarshal("welcome", w)
+}
+
+func EncodeDeath(d DeathPayload) []byte {
+	return MustMarshal("death", d)
+}
+
+func EncodeLeaderboard(l LeaderboardPayload) []byte {
+	return MustMarshal("leaderboard", l)
 }
