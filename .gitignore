@@ -8,6 +8,7 @@ server/internal/static/assets/*
 # Editor
 .vscode/
 .idea/
+.claude/
 
 # OS
 .DS_Store
