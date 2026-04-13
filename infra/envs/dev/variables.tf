@@ -1,0 +1,108 @@
+variable "project_name" {
+  description = "Project name prefix."
+  type        = string
+  default     = "samether"
+}
+
+variable "environment" {
+  description = "Environment name."
+  type        = string
+  default     = "dev"
+}
+
+variable "aws_region" {
+  description = "AWS region."
+  type        = string
+  default     = "ap-northeast-1"
+}
+
+variable "availability_zones" {
+  description = "Availability zones used for the VPC."
+  type        = list(string)
+  default     = ["ap-northeast-1a", "ap-northeast-1c"]
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC."
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "frontend_domain_name" {
+  description = "Frontend domain name."
+  type        = string
+}
+
+variable "api_domain_name" {
+  description = "API domain name."
+  type        = string
+}
+
+variable "route53_zone_name" {
+  description = "Route53 hosted zone name."
+  type        = string
+}
+
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN in the same region as the ALB."
+  type        = string
+}
+
+variable "cloudfront_acm_certificate_arn" {
+  description = "ACM certificate ARN in us-east-1 for CloudFront."
+  type        = string
+}
+
+variable "container_image" {
+  description = "Full container image URI for the game server."
+  type        = string
+  default     = "public.ecr.aws/docker/library/nginx:stable"
+}
+
+variable "container_port" {
+  description = "Backend container port."
+  type        = number
+  default     = 8080
+}
+
+variable "ecs_cpu" {
+  description = "Fargate task CPU units."
+  type        = number
+  default     = 512
+}
+
+variable "ecs_memory" {
+  description = "Fargate task memory in MiB."
+  type        = number
+  default     = 1024
+}
+
+variable "desired_count" {
+  description = "Initial ECS desired count."
+  type        = number
+  default     = 1
+}
+
+variable "min_capacity" {
+  description = "Minimum ECS service capacity."
+  type        = number
+  default     = 1
+}
+
+variable "max_capacity" {
+  description = "Maximum ECS service capacity."
+  type        = number
+  default     = 2
+}
+
+variable "redis_node_type" {
+  description = "ElastiCache node type."
+  type        = string
+  default     = "cache.t4g.micro"
+}
+
+variable "location_tracker_name" {
+  description = "Amazon Location tracker name."
+  type        = string
+  default     = "samether-dev-tracker"
+}
