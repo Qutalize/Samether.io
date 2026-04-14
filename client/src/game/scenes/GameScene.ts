@@ -548,7 +548,7 @@ export class GameScene extends Phaser.Scene {
   private onState(m: StatePayload): void {
     // 確実に自分自身のIDを更新・保持する
     if (m.you && m.you.id) {
-        this.myId = m.you.id;
+      this.myId = m.you.id;
     }
 
     if (m.full) {

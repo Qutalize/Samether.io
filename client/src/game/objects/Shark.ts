@@ -122,7 +122,7 @@ export class Shark extends Phaser.GameObjects.Container {
     }
 
     if (changedAppearance) {
-        this.updateColors();
+      this.updateColors();
     }
 
     /* rigid head segments (hardly bend) */

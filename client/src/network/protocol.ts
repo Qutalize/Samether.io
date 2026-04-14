@@ -8,7 +8,10 @@ export type BaseMessage<T extends string, P> = {
 };
 
 // Client → Server
-export type JoinMsg = BaseMessage<"join", { name: string; route: SharkRoute }>;
+export type JoinMsg = BaseMessage<"join", { 
+  name: string; 
+  route: SharkRoute; // TODO: Server-side support is pending. Currently ignored by the server.
+}>;
 export type InputMsg = BaseMessage<"input", { angle: number; dash: boolean }>;
 export type ClientMsg = JoinMsg | InputMsg;
 
@@ -26,7 +29,7 @@ export interface StateSharkView {
   y: number;
   angle: number;
   stage: number;
-  route?: SharkRoute;
+  route?: SharkRoute; // TODO: Server-side support is pending. Not populated from the server; client uses fallback.
 }
 
 export interface StateFoodView {
