@@ -1,12 +1,14 @@
 // Mirrors server/internal/ws/message.go
 
+export type SharkRoute = "attack" | "non-attack" | "deep-sea";
+
 export type BaseMessage<T extends string, P> = {
   type: T;
   payload: P;
 };
 
 // Client → Server
-export type JoinMsg = BaseMessage<"join", { name: string }>;
+export type JoinMsg = BaseMessage<"join", { name: string; route: SharkRoute }>;
 export type InputMsg = BaseMessage<"input", { angle: number; dash: boolean }>;
 export type ClientMsg = JoinMsg | InputMsg;
 
@@ -24,6 +26,7 @@ export interface StateSharkView {
   y: number;
   angle: number;
   stage: number;
+  route?: SharkRoute;
 }
 
 export interface StateFoodView {
