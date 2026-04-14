@@ -2,10 +2,12 @@ import Phaser from "phaser";
 import { net } from "../../network/websocket";
 import type {
   ServerMsg,
-  StateMsg,
-  WelcomeMsg,
-  DeathMsg,
-  LeaderboardMsg,
+  StatePayload,
+  WelcomePayload,
+  DeathPayload,
+  LeaderboardPayload,
+  StateSharkView,
+  StateFoodView,
 } from "../../network/protocol";
 import { Shark } from "../objects/Shark";
 import { Food } from "../objects/Food";
@@ -503,27 +505,27 @@ export class GameScene extends Phaser.Scene {
     if (!net.isOpen()) return;
     const angle = this.input2.pointerAngle();
     const dash = this.input2.isDashDown();
-    net.send({ type: "input", angle, dash });
+    net.send({ type: "input", payload: { angle, dash } });
   }
 
   private handleServer(m: ServerMsg): void {
     switch (m.type) {
       case "welcome":
-        this.onWelcome(m);
+        this.onWelcome(m.payload);
         break;
       case "state":
-        this.onState(m);
+        this.onState(m.payload);
         break;
       case "death":
-        this.onDeath(m);
+        this.onDeath(m.payload);
         break;
       case "leaderboard":
-        this.onLeaderboard(m);
+        this.onLeaderboard(m.payload);
         break;
     }
   }
 
-  private onWelcome(m: WelcomeMsg): void {
+  private onWelcome(m: WelcomePayload): void {
     this.myId = m.playerId;
     this.worldW = m.worldW;
     this.worldH = m.worldH;
@@ -531,44 +533,13 @@ export class GameScene extends Phaser.Scene {
     // this.oceanFloor.setSize(this.worldW, this.worldH);
   }
 
-  private onState(m: StateMsg): void {
-    /* sync sharks */
-    const seen = new Set<string>();
-    for (const v of m.sharks) {
-      seen.add(v.id);
-      let s = this.sharks.get(v.id);
-      if (!s) {
-        s = new Shark(this, v.x, v.y, v.id === this.myId);
-        this.sharks.set(v.id, s);
-        this.worldContainer.add(s);
-      }
-      s.updateFromState(v.x, v.y, v.angle, v.stage, this.time.now, v.name);
-    }
-    for (const [id, s] of this.sharks) {
-      if (!seen.has(id)) {
-        s.destroy();
-        this.sharks.delete(id);
-      }
+  private onState(m: StatePayload): void {
+    if (m.full) {
+      this.applyFullState(m);
+    } else {
+      this.applyStateDelta(m);
     }
 
-    /* sync foods */
-    const seenF = new Set<string>();
-    for (const f of m.foods) {
-      seenF.add(f.id);
-      if (!this.foods.has(f.id)) {
-        const foodObj = new Food(this, f.x, f.y, f.isRed);
-        this.foods.set(f.id, foodObj);
-        this.worldContainer.add(foodObj);
-      }
-    }
-    for (const [id, f] of this.foods) {
-      if (!seenF.has(id)) {
-        f.destroy();
-        this.foods.delete(id);
-      }
-    }
-
-    /* camera */
     if (m.you) {
       this.cameras.main.centerOn(m.you.x, m.you.y);
       const zoom = STAGE_ZOOMS[m.you.stage] ?? 1;
@@ -578,14 +549,14 @@ export class GameScene extends Phaser.Scene {
       /* cache for radar (drawn per-frame in update) */
       this.lastMyX = m.you.x;
       this.lastMyY = m.you.y;
-      const mySv = m.sharks.find((sv) => sv.id === this.myId);
+      const mySv = this.sharks.get(this.myId);
       if (mySv) this.lastMyAngle = mySv.angle;
-      this.cachedSharks = m.sharks.map((sv) => ({
-        id: sv.id,
+      this.cachedSharks = Array.from(this.sharks.entries()).map(([id, sv]) => ({
+        id,
         x: sv.x,
         y: sv.y,
       }));
-      this.cachedFoods = m.foods.map((fv) => ({ x: fv.x, y: fv.y }));
+      this.cachedFoods = Array.from(this.foods.values()).map((fv) => ({ x: fv.x, y: fv.y }));
 
       /* XP bar */
       const isMax = m.you.stage >= STAGE_THRESHOLDS.length - 1;
@@ -602,11 +573,103 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private onDeath(m: DeathMsg): void {
+  private applyFullState(m: StatePayload): void {
+    const seen = new Set<string>();
+    for (const v of m.sharks ?? []) {
+      seen.add(v.id);
+      let s = this.sharks.get(v.id);
+      if (!s) {
+        s = new Shark(this, v.x, v.y, v.id === this.myId);
+        this.sharks.set(v.id, s);
+        this.worldContainer.add(s);
+      }
+      s.updateFromState(v.x, v.y, v.angle, v.stage, this.time.now, v.name);
+    }
+    for (const [id, s] of this.sharks) {
+      if (!seen.has(id)) {
+        s.destroy();
+        this.sharks.delete(id);
+      }
+    }
+
+    const seenF = new Set<string>();
+    for (const f of m.foods ?? []) {
+      seenF.add(f.id);
+      if (!this.foods.has(f.id)) {
+        const foodObj = new Food(this, f.x, f.y, f.isRed);
+        this.foods.set(f.id, foodObj);
+        this.worldContainer.add(foodObj);
+      }
+    }
+    for (const [id, f] of this.foods) {
+      if (!seenF.has(id)) {
+        f.destroy();
+        this.foods.delete(id);
+      }
+    }
+  }
+
+  private applyStateDelta(m: StatePayload): void {
+    for (const v of m.addedSharks ?? []) {
+      this.upsertShark(v);
+    }
+    for (const v of m.updatedSharks ?? []) {
+      this.upsertShark(v);
+    }
+    for (const id of m.removedSharks ?? []) {
+      this.removeShark(id);
+    }
+
+    for (const f of m.addedFoods ?? []) {
+      this.upsertFood(f);
+    }
+    for (const f of m.updatedFoods ?? []) {
+      this.upsertFood(f);
+    }
+    for (const id of m.removedFoods ?? []) {
+      this.removeFood(id);
+    }
+  }
+
+  private upsertShark(v: StateSharkView): void {
+    let s = this.sharks.get(v.id);
+    if (!s) {
+      s = new Shark(this, v.x, v.y, v.id === this.myId);
+      this.sharks.set(v.id, s);
+      this.worldContainer.add(s);
+    }
+    s.updateFromState(v.x, v.y, v.angle, v.stage, this.time.now, v.name);
+  }
+
+  private removeShark(id: string): void {
+    const s = this.sharks.get(id);
+    if (!s) return;
+    s.destroy();
+    this.sharks.delete(id);
+  }
+
+  private upsertFood(v: StateFoodView): void {
+    let f = this.foods.get(v.id);
+    if (!f) {
+      f = new Food(this, v.x, v.y, v.isRed);
+      this.foods.set(v.id, f);
+      this.worldContainer.add(f);
+    }
+    f.setPosition(v.x, v.y);
+  }
+
+  private removeFood(id: string): void {
+    const f = this.foods.get(id);
+    if (!f) return;
+    f.destroy();
+    this.foods.delete(id);
+  }
+
+  private onDeath(m: DeathPayload): void {
     this.scene.start("DeathScreen", { score: m.score, stage: m.stage });
   }
 
-  private onLeaderboard(m: LeaderboardMsg): void {
+  private onLeaderboard(m: LeaderboardPayload): void {
     this.leaderText.setText(
       `👑 Top Predator: ${m.topName} (${m.topScore})`,
     );
