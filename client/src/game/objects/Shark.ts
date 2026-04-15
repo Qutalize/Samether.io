@@ -1,9 +1,16 @@
 import Phaser from "phaser";
+import { SharkRoute } from "../../network/protocol";
 
 /* ── colours tuned to look like semi-transparent grey
       silhouettes against the dark ocean ──────────────────── */
 const BODY_COLORS = [0x708898, 0x668090, 0x5c7488, 0x526880, 0x485c78];
 const SIZE_SCALES = [1.3, 1.45, 1.6, 1.8, 2.05];
+
+const ROUTE_GLOW_COLORS: Record<SharkRoute, number> = {
+  "attack": 0xff6666,     // UIと同じ赤
+  "non-attack": 0x66ccff, // UIと同じ青
+  "deep-sea": 0xbb66ff    // UIと同じ紫
+};
 
 const SEGMENT_COUNT = 24;
 const BASE_SPACING = 5.5;
@@ -13,6 +20,7 @@ export class Shark extends Phaser.GameObjects.Container {
   private nameText: Phaser.GameObjects.Text;
 
   private stage = 0;
+  private route: SharkRoute = "attack";
   private isSelf: boolean;
   private sharkName = "";
 
@@ -60,9 +68,20 @@ export class Shark extends Phaser.GameObjects.Container {
 
   private updateColors() {
     if (!this.rope) return;
+    // 1. Base tint (grey silhouette)
     const color = BODY_COLORS[this.stage] ?? BODY_COLORS[0];
     const tint = this.isSelf ? color : 0x5a7a8e;
     this.rope.setColors(tint);
+
+    // 2. Route specific glow using Phaser's standard postFX
+    if (this.rope.postFX) {
+      this.rope.postFX.clear();
+      // Increase padding to ensure the outer glow doesn't get clipped by the bounds
+      this.rope.postFX.setPadding(32);
+      const glowColor = ROUTE_GLOW_COLORS[this.route];
+      // addGlow(color, outerStrength, innerStrength, knockout, threshold, distance)
+      this.rope.postFX.addGlow(glowColor, 4, 0, false, 0.1, 10);
+    }
   }
 
   /* slow powerful tail undulation */
@@ -78,6 +97,7 @@ export class Shark extends Phaser.GameObjects.Container {
     angle: number,
     stage: number,
     t: number,
+    route: SharkRoute,
     name?: string,
   ): void {
     this.targetX = x;
@@ -89,9 +109,19 @@ export class Shark extends Phaser.GameObjects.Container {
       this.nameText.setText(name);
     }
 
+    let changedAppearance = false;
     if (stage !== this.stage) {
       this.stage = stage;
       this.setScale(SIZE_SCALES[stage] ?? 1);
+      changedAppearance = true;
+    }
+    
+    if (route !== this.route) {
+      this.route = route;
+      changedAppearance = true;
+    }
+
+    if (changedAppearance) {
       this.updateColors();
     }
 
@@ -135,13 +165,14 @@ export class Shark extends Phaser.GameObjects.Container {
       const norm = sa + Math.PI / 2;
 
       // Convert to local coordinates within the container
-      pts.push(new Phaser.Math.Vector2(
-        sp.x + Math.cos(norm) * wave - this.targetX,
-        sp.y + Math.sin(norm) * wave - this.targetY
-      ));
+      const lx = sp.x + Math.cos(norm) * wave - this.targetX;
+      const ly = sp.y + Math.sin(norm) * wave - this.targetY;
+      
+      pts.push(new Phaser.Math.Vector2(lx, ly));
     }
 
     this.rope.setPoints(pts);
+    
     this.setPosition(this.targetX, this.targetY);
   }
 }
