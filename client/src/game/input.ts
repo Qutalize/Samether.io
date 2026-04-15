@@ -145,7 +145,8 @@ export class InputController {
     const originAngle = Math.PI / 2; // Bottom
     const span = Math.PI * ratio;
 
-    this.cpGfx.lineStyle(5, 0x44ddff, 1);
+    // 水色 (0x44ddff) から明るい橙色 (0xff8833) に変更
+    this.cpGfx.lineStyle(5, 0xff8833, 1);
     
     // Draw right arc (from bottom upwards to the right side of the screen)
     this.cpGfx.beginPath();

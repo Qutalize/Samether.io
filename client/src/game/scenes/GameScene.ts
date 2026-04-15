@@ -63,6 +63,8 @@ export class GameScene extends Phaser.Scene {
   private worldContainer!: Phaser.GameObjects.Container;
   private uiContainer!: Phaser.GameObjects.Container;
   private uiCamera!: Phaser.Cameras.Scene2D.Camera;
+  
+  private vignetteOverlay!: Phaser.GameObjects.Image;
 
   /* background layers */
   private worldBorder!: Phaser.GameObjects.Graphics;
@@ -120,6 +122,14 @@ export class GameScene extends Phaser.Scene {
     this.bgContainer = this.add.container(0, 0).setDepth(-1000);
     this.worldContainer = this.add.container(0, 0).setDepth(0);
     this.uiContainer = this.add.container(0, 0).setDepth(1000);
+
+    /* Vignette overlay (in UI container, behind HUD) */
+    this.vignetteOverlay = this.add.image(this.scale.width / 2, this.scale.height / 2, "vignette_default");
+    // Ensure it covers the whole screen even on ultrawide
+    const maxDim = Math.max(this.scale.width, this.scale.height);
+    this.vignetteOverlay.setDisplaySize(maxDim * 1.5, maxDim * 1.5);
+    this.vignetteOverlay.setDepth(-1); // Behind UI elements
+    this.uiContainer.add(this.vignetteOverlay);
 
     /* Background Shader */
     this.bgShader = this.add.shader("OceanBackground", this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height);
@@ -189,6 +199,11 @@ export class GameScene extends Phaser.Scene {
         this.bgShader.setSize(sz.width, sz.height);
         this.bgShader.setPosition(sz.width / 2, sz.height / 2);
       }
+      if (this.vignetteOverlay) {
+        this.vignetteOverlay.setPosition(sz.width / 2, sz.height / 2);
+        const maxDim = Math.max(sz.width, sz.height);
+        this.vignetteOverlay.setDisplaySize(maxDim * 1.5, maxDim * 1.5);
+      }
     });
 
     /* network */
@@ -242,8 +257,46 @@ export class GameScene extends Phaser.Scene {
   /* ════════════════════════════════════════════════════════ */
   /*  PROCEDURAL TEXTURES                                     */
   /* ════════════════════════════════════════════════════════ */
+  
+  /**
+   * 視界の広さを変更するメソッド
+   * 将来、サメのタイプ（深海魚など）によって呼び出してください。
+   * 例: this.setVisionRange(0.15, 0.4, "vignette_deepsea")
+   */
+  public setVisionRange(innerRatio: number, outerRatio: number, textureKey = "vignette_default"): void {
+    if (!this.textures.exists(textureKey)) {
+      const size = 1024;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+      
+      const cx = size / 2;
+      const cy = size / 2;
+      const rInner = size * innerRatio;
+      const rOuter = size * outerRatio;
+      
+      const grad = ctx.createRadialGradient(cx, cy, rInner, cx, cy, rOuter);
+      grad.addColorStop(0, "rgba(0, 0, 0, 0)");
+      grad.addColorStop(0.5, "rgba(0, 5, 15, 0.95)");
+      grad.addColorStop(1, "rgba(0, 2, 5, 1)");
+      
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      
+      this.textures.addCanvas(textureKey, canvas);
+    }
+    
+    // 既存のオーバーレイがあればテクスチャを差し替える
+    if (this.vignetteOverlay) {
+      this.vignetteOverlay.setTexture(textureKey);
+    }
+  }
+
   private ensureTextures(): void {
     this.createFoodTextures();
+    // デフォルトの狭い視界を生成
+    this.setVisionRange(0.05, 0.25, "vignette_default");
   }
 
   private createFoodTextures(): void {
@@ -465,8 +518,13 @@ export class GameScene extends Phaser.Scene {
   /* ════════════════════════════════════════════════════════ */
   private drawWorldBorder(): void {
     this.worldBorder.clear();
-    this.worldBorder.lineStyle(4, 0x0a3050, 0.8);
+    // わかりやすい赤色に変更し、太さも4->8に強化
+    this.worldBorder.lineStyle(8, 0xff0000, 1.0);
     this.worldBorder.strokeRect(0, 0, this.worldW, this.worldH);
+    
+    // 内側に少しグロー効果（細い線）を追加してより目立たせる
+    this.worldBorder.lineStyle(2, 0xff5555, 0.5);
+    this.worldBorder.strokeRect(4, 4, this.worldW - 8, this.worldH - 8);
   }
 
   /* ════════════════════════════════════════════════════════ */
