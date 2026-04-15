@@ -1,12 +1,17 @@
 // Mirrors server/internal/ws/message.go
 
+export type SharkRoute = "attack" | "non-attack" | "deep-sea";
+
 export type BaseMessage<T extends string, P> = {
   type: T;
   payload: P;
 };
 
 // Client → Server
-export type JoinMsg = BaseMessage<"join", { name: string }>;
+export type JoinMsg = BaseMessage<"join", { 
+  name: string; 
+  route: SharkRoute; // TODO: Server-side support is pending. Currently ignored by the server.
+}>;
 export type InputMsg = BaseMessage<"input", { angle: number; dash: boolean }>;
 export type ClientMsg = JoinMsg | InputMsg;
 
@@ -24,6 +29,7 @@ export interface StateSharkView {
   y: number;
   angle: number;
   stage: number;
+  route?: SharkRoute; // TODO: Server-side support is pending. Not populated from the server; client uses fallback.
 }
 
 export interface StateFoodView {

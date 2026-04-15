@@ -8,6 +8,7 @@ import type {
   LeaderboardPayload,
   StateSharkView,
   StateFoodView,
+  SharkRoute,
 } from "../../network/protocol";
 import { Shark } from "../objects/Shark";
 import { Food } from "../objects/Food";
@@ -18,13 +19,12 @@ import { InputController } from "../input";
 /* ── constants ─────────────────────────────────────────────── */
 const STAGE_THRESHOLDS = [0, 10, 25, 50, 100];
 const STAGE_ZOOMS = [1.0, 0.93, 0.88, 0.82, 0.76];
-const STAGE_NAMES = [
-  "シュモクザメ",
-  "イタチザメ",
-  "アオザメ",
-  "ホオジロザメ",
-  "メガロドン",
-];
+
+const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
+  "attack": ["シュモクザメ", "イタチザメ", "アオザメ", "ホオジロザメ", "メガロドン"],
+  "non-attack": ["ドチザメ", "ネムリブカ", "シロワニ", "ウバザメ", "ジンベエザメ"],
+  "deep-sea": ["ツラナガコビトザメ", "ノコギリザメ", "ラブカ", "ミツクリザメ", "ニシオンデンザメ"]
+};
 
 const RADAR_R = 90;
 const RADAR_RANGE = 1400;
@@ -37,6 +37,16 @@ function hash(n: number): number {
   return s - Math.floor(s);
 }
 
+// Dummy route generator based on string hash
+function getDummyRoute(id: string): SharkRoute {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = Math.imul(31, h) + id.charCodeAt(i) | 0;
+  }
+  const routes: SharkRoute[] = ["attack", "non-attack", "deep-sea"];
+  return routes[Math.abs(h) % routes.length];
+}
+
 /* ═══════════════════════════════════════════════════════════ */
 export class GameScene extends Phaser.Scene {
   /* world */
@@ -44,6 +54,7 @@ export class GameScene extends Phaser.Scene {
   private worldH = 4000;
   private myId = "";
   private myName = "";
+  private myRoute: SharkRoute = "attack";
 
   /* entities */
   private sharks = new Map<string, Shark>();
@@ -93,8 +104,9 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
-  init(data: { name: string }): void {
+  init(data: { name: string; route: SharkRoute }): void {
     this.myName = data.name;
+    this.myRoute = data.route;
   }
 
   preload(): void {
@@ -157,7 +169,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.uiContainer.add(this.scoreText);
 
-    this.stageText = this.add.text(22, 70, STAGE_NAMES[0], {
+    this.stageText = this.add.text(22, 70, ROUTE_STAGE_NAMES[this.myRoute][0], {
       fontFamily: "system-ui, sans-serif",
       fontSize: "11px",
       color: "#556677",
@@ -562,6 +574,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onState(m: StatePayload): void {
+    // 確実に自分自身のIDを更新・保持する
+    if (m.you && m.you.id) {
+      this.myId = m.you.id;
+    }
+
     if (m.full) {
       this.applyFullState(m);
     } else {
@@ -595,7 +612,7 @@ export class GameScene extends Phaser.Scene {
         isMax ? "MAX LEVEL" : `${m.you.xp} / ${threshold} XP`,
       );
       this.stageText.setText(
-        STAGE_NAMES[Math.min(m.you.stage, STAGE_NAMES.length - 1)],
+        ROUTE_STAGE_NAMES[this.myRoute][Math.min(m.you.stage, ROUTE_STAGE_NAMES[this.myRoute].length - 1)],
       );
     }
   }
@@ -605,12 +622,15 @@ export class GameScene extends Phaser.Scene {
     for (const v of m.sharks ?? []) {
       seen.add(v.id);
       let s = this.sharks.get(v.id);
+      const isSelf = v.id === this.myId;
       if (!s) {
-        s = new Shark(this, v.x, v.y, v.id === this.myId);
+        s = new Shark(this, v.x, v.y, isSelf);
         this.sharks.set(v.id, s);
         this.worldContainer.add(s);
       }
-      s.updateFromState(v.x, v.y, v.angle, v.stage, this.time.now, v.name);
+      // 強制的に自分のサメには自分が選択したルートを適用する
+      const route = isSelf ? this.myRoute : (v.route ?? getDummyRoute(v.id));
+      s.updateFromState(v.x, v.y, v.angle, v.stage, this.time.now, route, v.name);
     }
     for (const [id, s] of this.sharks) {
       if (!seen.has(id)) {
@@ -660,12 +680,15 @@ export class GameScene extends Phaser.Scene {
 
   private upsertShark(v: StateSharkView): void {
     let s = this.sharks.get(v.id);
+    const isSelf = v.id === this.myId;
     if (!s) {
-      s = new Shark(this, v.x, v.y, v.id === this.myId);
+      s = new Shark(this, v.x, v.y, isSelf);
       this.sharks.set(v.id, s);
       this.worldContainer.add(s);
     }
-    s.updateFromState(v.x, v.y, v.angle, v.stage, this.time.now, v.name);
+    // 強制的に自分のサメには自分が選択したルートを適用する
+    const route = isSelf ? this.myRoute : (v.route ?? getDummyRoute(v.id));
+    s.updateFromState(v.x, v.y, v.angle, v.stage, this.time.now, route, v.name);
   }
 
   private removeShark(id: string): void {
