@@ -25,7 +25,8 @@ type Point struct {
 // ============================================================
 
 type JoinPayload struct {
-	Name string `json:"name"`
+	Name  string `json:"name"`
+	Route string `json:"route,omitempty"`
 }
 
 type InputPayload struct {
@@ -81,6 +82,7 @@ type StateSharkView struct {
 	Y     float64 `json:"y"`
 	Angle float64 `json:"angle"`
 	Stage int     `json:"stage"`
+	Route string  `json:"route,omitempty"`
 }
 
 type StateFoodView struct {

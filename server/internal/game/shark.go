@@ -2,9 +2,28 @@ package game
 
 import "math"
 
+// Route identifiers shared with the client (see client/src/network/protocol.ts).
+const (
+	RouteAttack    = "attack"
+	RouteNonAttack = "non-attack"
+	RouteDeepSea   = "deep-sea"
+)
+
+// NormalizeRoute returns a valid route, falling back to RouteAttack for
+// unknown or empty inputs.
+func NormalizeRoute(r string) string {
+	switch r {
+	case RouteAttack, RouteNonAttack, RouteDeepSea:
+		return r
+	default:
+		return RouteAttack
+	}
+}
+
 type Shark struct {
 	ID            string
 	Name          string
+	Route         string
 	Head          Vec
 	Angle         float64 // radians
 	TargetAngle   float64 // target turning angle
@@ -23,6 +42,7 @@ func NewShark(id, name string, spawn Vec) *Shark {
 	s := &Shark{
 		ID:          id,
 		Name:        name,
+		Route:       RouteAttack,
 		Head:        spawn,
 		Angle:       0,
 		TargetAngle: 0,
