@@ -19,6 +19,10 @@ type inboundMsg struct {
 }
 
 type Hub struct {
+	roomID       string
+	roomCapacity int
+	instanceID   string
+
 	world       *game.World
 	leaderboard *game.Leaderboard
 	clients     map[*Client]bool
@@ -31,17 +35,36 @@ type Hub struct {
 	nextBotID    uint64
 }
 
-func NewHub() *Hub {
+type Config struct {
+	RoomID       string
+	RoomCapacity int
+	InstanceID   string
+}
+
+func NewHub(cfg Config) *Hub {
 	w := game.NewWorld()
 	w.SpawnFoodsTo(game.FoodCount)
 
+	if cfg.RoomID == "" {
+		cfg.RoomID = "room-1"
+	}
+	if cfg.RoomCapacity <= 0 {
+		cfg.RoomCapacity = 50
+	}
+	if cfg.InstanceID == "" {
+		cfg.InstanceID = cfg.RoomID
+	}
+
 	return &Hub{
-		world:       w,
-		leaderboard: game.NewLeaderboard(),
-		clients:     make(map[*Client]bool),
-		register:    make(chan *Client),
-		unregister:  make(chan *Client, 16),
-		inbound:     make(chan inboundMsg, 256),
+		roomID:       cfg.RoomID,
+		roomCapacity: cfg.RoomCapacity,
+		instanceID:   cfg.InstanceID,
+		world:        w,
+		leaderboard:  game.NewLeaderboard(),
+		clients:      make(map[*Client]bool),
+		register:     make(chan *Client),
+		unregister:   make(chan *Client, 16),
+		inbound:      make(chan inboundMsg, 256),
 	}
 }
 
@@ -59,17 +82,36 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := &Client{
-		hub:  h,
-		conn: conn,
-		send: make(chan []byte, 64),
+		hub:        h,
+		conn:       conn,
+		send:       make(chan []byte, 64),
 		lastSharks: make(map[string]StateSharkView),
-		lastFoods: make(map[string]StateFoodView),
+		lastFoods:  make(map[string]StateFoodView),
 	}
 
 	h.register <- client
 
 	go client.writePump()
 	go client.readPump()
+}
+
+func (h *Hub) RoomSnapshot() RoomInfoPayload {
+	return RoomInfoPayload{
+		ID:         h.roomID,
+		Capacity:   h.roomCapacity,
+		Players:    h.playerCount(),
+		InstanceID: h.instanceID,
+	}
+}
+
+func (h *Hub) playerCount() int {
+	count := 0
+	for _, shark := range h.world.Sharks {
+		if shark != nil && shark.Alive && !shark.IsBot {
+			count++
+		}
+	}
+	return count
 }
 
 func (h *Hub) allocPlayerID() string {
@@ -157,6 +199,17 @@ func (h *Hub) handleInbound(m inboundMsg) {
 	switch typ {
 
 	case "join":
+		if m.client.playerID != "" {
+			return
+		}
+		if h.playerCount() >= h.roomCapacity {
+			h.send(m.client, "room_full", RoomFullPayload{
+				Room:   h.RoomSnapshot(),
+				Reason: "room capacity reached",
+			})
+			return
+		}
+
 		p := payload.(JoinPayload)
 
 		id := h.allocPlayerID()
@@ -169,6 +222,7 @@ func (h *Hub) handleInbound(m inboundMsg) {
 			PlayerID: id,
 			WorldW:   game.WorldWidth,
 			WorldH:   game.WorldHeight,
+			Room:     h.RoomSnapshot(),
 		})
 
 		name, score, ok := h.leaderboard.Top()
@@ -294,9 +348,9 @@ func (h *Hub) sendStateTo(c *Client) {
 
 	if self == nil {
 		payload := StatePayload{
-			Tick: h.world.Tick,
-			Full: true,
-			You:  StateYou{},
+			Tick:   h.world.Tick,
+			Full:   true,
+			You:    StateYou{},
 			Sharks: []StateSharkView{},
 			Foods:  []StateFoodView{},
 		}
