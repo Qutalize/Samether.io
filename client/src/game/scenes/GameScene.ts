@@ -11,6 +11,8 @@ import type {
 } from "../../network/protocol";
 import { Shark } from "../objects/Shark";
 import { Food } from "../objects/Food";
+import { OceanBackgroundShader } from "../objects/BackgroundShader";
+import { SharkPipeline } from "../objects/SharkShader";
 import { InputController } from "../input";
 
 /* ── constants ─────────────────────────────────────────────── */
@@ -57,6 +59,7 @@ export class GameScene extends Phaser.Scene {
   private cpConsumeRate = 50; // per second
 
   /* layers */
+  private bgContainer!: Phaser.GameObjects.Container;
   private worldContainer!: Phaser.GameObjects.Container;
   private uiContainer!: Phaser.GameObjects.Container;
   private uiCamera!: Phaser.Cameras.Scene2D.Camera;
@@ -82,7 +85,7 @@ export class GameScene extends Phaser.Scene {
   private cachedFoods: { x: number; y: number }[] = [];
 
   /* atmosphere */
-  private vignette!: Phaser.GameObjects.Image;
+  private bgShader!: Phaser.GameObjects.Shader;
 
   constructor() {
     super({ key: "GameScene" });
@@ -94,19 +97,34 @@ export class GameScene extends Phaser.Scene {
 
   preload(): void {
     this.load.image("shark", "shark.png");
+    // Register the shader with the Cache
+    if (!this.cache.shader.has("OceanBackground")) {
+      this.cache.shader.add("OceanBackground", OceanBackgroundShader);
+    }
   }
 
   /* ════════════════════════════════════════════════════════ */
   /*  CREATE                                                  */
   /* ════════════════════════════════════════════════════════ */
   create(): void {
+    const renderer = this.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
+    if (renderer.pipelines) {
+      renderer.pipelines.addPostPipeline("SharkShader", SharkPipeline);
+    }
+    
     this.cameras.main.setBackgroundColor("#001b44");
     this.ensureTextures();
     this.createSharkTexture();
 
     /* Layers setup */
-    this.worldContainer = this.add.container(0, 0);
+    this.bgContainer = this.add.container(0, 0).setDepth(-1000);
+    this.worldContainer = this.add.container(0, 0).setDepth(0);
     this.uiContainer = this.add.container(0, 0).setDepth(1000);
+
+    /* Background Shader */
+    this.bgShader = this.add.shader("OceanBackground", this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height);
+    this.bgShader.setScrollFactor(0);
+    this.bgContainer.add(this.bgShader);
 
     /* world boundary */
     this.worldBorder = this.add.graphics().setDepth(0);
@@ -153,22 +171,24 @@ export class GameScene extends Phaser.Scene {
     this.radarGfx = this.add.graphics();
     this.uiContainer.add(this.radarGfx);
 
-    /* vignette */
-    this.createVignette();
-    this.uiContainer.add(this.vignette);
 
     /* Camera setup: Main camera ignores UI, UI camera ignores World */
     this.uiCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height);
     this.uiCamera.setScroll(0, 0);
     this.cameras.main.ignore(this.uiContainer);
     this.uiCamera.ignore(this.worldContainer);
+    this.uiCamera.ignore(this.bgContainer);
 
     /* resize */
     this.scale.on("resize", (sz: Phaser.Structs.Size) => {
       this.leaderText.setX(sz.width / 2);
       this.drawLeaderPanel();
-      this.resizeVignette(sz.width, sz.height, 1.0);
+      
       this.uiCamera.setSize(sz.width, sz.height);
+      if (this.bgShader) {
+        this.bgShader.setSize(sz.width, sz.height);
+        this.bgShader.setPosition(sz.width / 2, sz.height / 2);
+      }
     });
 
     /* network */
@@ -184,6 +204,20 @@ export class GameScene extends Phaser.Scene {
   /*  UPDATE (every frame)                                    */
   /* ════════════════════════════════════════════════════════ */
   update(time: number, delta: number): void {
+    if (this.bgShader) {
+      const cam = this.cameras.main;
+      // Keep background quad at full screen size regardless of zoom
+      this.bgShader.setScale(1 / cam.zoom);
+      
+      // Use camera center for parallax instead of scrollX/Y.
+      // This ensures the background pattern doesn't scale or jump when zooming.
+      const centerX = cam.scrollX + (cam.width / 2) / cam.zoom;
+      const centerY = cam.scrollY + (cam.height / 2) / cam.zoom;
+
+      this.bgShader.setUniform('uScroll.value.x', centerX * 0.0005);
+      this.bgShader.setUniform('uScroll.value.y', centerY * 0.0005);
+    }
+
     /* animate food glow */
     for (const f of this.foods.values()) f.tickAnim(time);
 
@@ -209,7 +243,6 @@ export class GameScene extends Phaser.Scene {
   /*  PROCEDURAL TEXTURES                                     */
   /* ════════════════════════════════════════════════════════ */
   private ensureTextures(): void {
-    if (!this.textures.exists("ocean_floor")) this.genOceanFloor();
     this.createFoodTextures();
   }
 
@@ -265,68 +298,6 @@ export class GameScene extends Phaser.Scene {
     }
     ctx.putImageData(imgData, 0, 0);
     this.textures.addCanvas("shark_small", canvas);
-  }
-
-  /** Subtle dark ocean floor with low-frequency noise */
-  private genOceanFloor(): void {
-    const S = 256;
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = S;
-    const ctx = canvas.getContext("2d")!;
-    const img = ctx.createImageData(S, S);
-    const d = img.data;
-
-    const f = (n: number) => (n * TAU) / S;
-
-    for (let y = 0; y < S; y++) {
-      for (let x = 0; x < S; x++) {
-        const n =
-          Math.sin(x * f(2)) * Math.cos(y * f(3)) * 0.3 +
-          Math.sin(x * f(1) + y * f(2)) * 0.2 +
-          hash(x * 137 + y * 311) * 0.12;
-        const base = 16 + n * 8;
-
-        const i = (y * S + x) * 4;
-        d[i] = base * 0.2;
-        d[i + 1] = base * 0.5;
-        d[i + 2] = base;
-        d[i + 3] = 255;
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-    this.textures.addCanvas("ocean_floor", canvas);
-  }
-
-  /* ════════════════════════════════════════════════════════ */
-  /*  VIGNETTE                                                */
-  /* ════════════════════════════════════════════════════════ */
-  private createVignette(): void {
-    const w = this.scale.width;
-    const h = this.scale.height;
-
-    if (!this.textures.exists("vignette")) {
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = 512;
-      const ctx = canvas.getContext("2d")!;
-      const g = ctx.createRadialGradient(256, 256, 80, 256, 256, 362);
-      g.addColorStop(0, "rgba(0,0,0,0)");
-      g.addColorStop(0.6, "rgba(0,0,0,0)");
-      g.addColorStop(0.85, "rgba(0,0,0,0.3)");
-      g.addColorStop(1, "rgba(0,0,0,0.7)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 512, 512);
-      this.textures.addCanvas("vignette", canvas);
-    }
-
-    this.vignette = this.add.image(w / 2, h / 2, "vignette");
-    this.vignette.setScrollFactor(0).setDepth(999);
-    this.resizeVignette(w, h, 1.0);
-  }
-
-  private resizeVignette(w: number, h: number, zoom: number): void {
-    if (!this.vignette) return;
-    this.vignette.setPosition(w / 2, h / 2);
-    this.vignette.setDisplaySize(w / zoom, h / zoom);
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -530,7 +501,6 @@ export class GameScene extends Phaser.Scene {
     this.worldW = m.worldW;
     this.worldH = m.worldH;
     this.drawWorldBorder();
-    // this.oceanFloor.setSize(this.worldW, this.worldH);
   }
 
   private onState(m: StatePayload): void {
@@ -544,7 +514,6 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.centerOn(m.you.x, m.you.y);
       const zoom = STAGE_ZOOMS[m.you.stage] ?? 1;
       this.cameras.main.setZoom(zoom);
-      this.resizeVignette(this.scale.width, this.scale.height, zoom);
 
       /* cache for radar (drawn per-frame in update) */
       this.lastMyX = m.you.x;
