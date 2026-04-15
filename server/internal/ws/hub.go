@@ -108,6 +108,11 @@ func randomSpawn() game.Vec {
 	}
 }
 
+func randomBotRoute() string {
+	routes := []string{game.RouteAttack, game.RouteNonAttack, game.RouteDeepSea}
+	return routes[rand.Intn(len(routes))]
+}
+
 // 新送信関数（Payload対応）
 func (h *Hub) send(c *Client, typ string, payload any) {
 	b := MustMarshal(typ, payload)
@@ -163,6 +168,7 @@ func (h *Hub) handleInbound(m inboundMsg) {
 		m.client.playerID = id
 
 		s := game.NewShark(id, p.Name, randomSpawn())
+		s.Route = game.NormalizeRoute(p.Route)
 		h.world.Sharks[id] = s
 
 		h.send(m.client, "welcome", WelcomePayload{
@@ -205,6 +211,7 @@ func (h *Hub) step(dt float64) {
 
 		s := game.NewShark(id, name, randomSpawn())
 		s.IsBot = true
+		s.Route = randomBotRoute()
 		h.world.Sharks[id] = s
 	}
 
@@ -282,7 +289,7 @@ func (h *Hub) broadcastLeaderboard() {
 }
 
 func sharkViewEqual(a, b StateSharkView) bool {
-	return a.ID == b.ID && a.Name == b.Name && a.X == b.X && a.Y == b.Y && a.Angle == b.Angle && a.Stage == b.Stage
+	return a.ID == b.ID && a.Name == b.Name && a.X == b.X && a.Y == b.Y && a.Angle == b.Angle && a.Stage == b.Stage && a.Route == b.Route
 }
 
 func foodViewEqual(a, b StateFoodView) bool {
@@ -325,6 +332,7 @@ func (h *Hub) sendStateTo(c *Client) {
 			Y:     s.Head.Y,
 			Angle: s.Angle,
 			Stage: s.Stage,
+			Route: s.Route,
 		}
 		currentSharks = append(currentSharks, view)
 		currentSharkMap[view.ID] = view
