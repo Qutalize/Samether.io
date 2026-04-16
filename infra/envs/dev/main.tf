@@ -56,6 +56,9 @@ module "ecs_service" {
   desired_count             = var.desired_count
   min_capacity              = var.min_capacity
   max_capacity              = var.max_capacity
+  room_capacity             = var.room_capacity
+  redis_primary_endpoint    = module.redis.primary_endpoint_address
+  location_tracker_name     = module.location.tracker_name
 }
 
 module "redis" {

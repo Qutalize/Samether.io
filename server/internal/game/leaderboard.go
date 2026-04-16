@@ -47,3 +47,16 @@ func (l *Leaderboard) EndTick() bool {
 func (l *Leaderboard) Top() (name string, score int, ok bool) {
 	return l.lastTopName, l.lastTopScore, l.lastHasData
 }
+
+// Update keeps older tests and callers working in single-step mode.
+func (l *Leaderboard) Update(name string, score int) bool {
+	if !l.lastHasData || score > l.lastTopScore || name == l.lastTopName {
+		changed := !l.lastHasData || l.lastTopName != name || l.lastTopScore != score
+		l.lastTopID = name
+		l.lastTopName = name
+		l.lastTopScore = score
+		l.lastHasData = true
+		return changed
+	}
+	return false
+}

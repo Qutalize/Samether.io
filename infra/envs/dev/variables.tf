@@ -80,19 +80,25 @@ variable "ecs_memory" {
 variable "desired_count" {
   description = "Initial ECS desired count."
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "min_capacity" {
   description = "Minimum ECS service capacity."
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "max_capacity" {
   description = "Maximum ECS service capacity."
   type        = number
-  default     = 2
+  default     = 4
+}
+
+variable "room_capacity" {
+  description = "Maximum players allowed per task-local room."
+  type        = number
+  default     = 50
 }
 
 variable "redis_node_type" {

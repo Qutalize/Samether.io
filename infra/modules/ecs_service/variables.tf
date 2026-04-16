@@ -53,3 +53,15 @@ variable "min_capacity" {
 variable "max_capacity" {
   type = number
 }
+
+variable "room_capacity" {
+  type = number
+}
+
+variable "redis_primary_endpoint" {
+  type = string
+}
+
+variable "location_tracker_name" {
+  type = string
+}
