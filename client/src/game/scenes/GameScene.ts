@@ -136,7 +136,8 @@ export class GameScene extends Phaser.Scene {
     this.uiContainer = this.add.container(0, 0).setDepth(1000);
 
     /* Vignette overlay (in UI container, behind HUD) */
-    this.vignetteOverlay = this.add.image(this.scale.width / 2, this.scale.height / 2, "vignette_default");
+    const vignetteKey = this.myRoute === "deep-sea" ? "vignette_deepsea" : "vignette_default";
+    this.vignetteOverlay = this.add.image(this.scale.width / 2, this.scale.height / 2, vignetteKey);
     // Ensure it covers the whole screen even on ultrawide
     const maxDim = Math.max(this.scale.width, this.scale.height);
     this.vignetteOverlay.setDisplaySize(maxDim * 1.5, maxDim * 1.5);
@@ -307,8 +308,10 @@ export class GameScene extends Phaser.Scene {
 
   private ensureTextures(): void {
     this.createFoodTextures();
-    // デフォルトの狭い視界を生成
+    // デフォルトの狭い視界
     this.setVisionRange(0.05, 0.25, "vignette_default");
+    // 深海魚用の広い視界
+    this.setVisionRange(0.15, 0.45, "vignette_deepsea");
   }
 
   private createFoodTextures(): void {
