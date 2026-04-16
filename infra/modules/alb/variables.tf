@@ -18,14 +18,3 @@ variable "target_port" {
   type = number
 }
 
-variable "certificate_arn" {
-  type = string
-}
-
-variable "api_domain_name" {
-  type = string
-}
-
-variable "zone_id" {
-  type = string
-}
