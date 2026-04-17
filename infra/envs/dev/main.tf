@@ -7,11 +7,6 @@ locals {
   }
 }
 
-data "aws_route53_zone" "primary" {
-  name         = var.route53_zone_name
-  private_zone = false
-}
-
 module "network" {
   source = "../../modules/network"
 
@@ -34,9 +29,6 @@ module "alb" {
   public_subnet_ids  = module.network.public_subnet_ids
   alb_security_group = module.network.alb_security_group_id
   target_port        = var.container_port
-  certificate_arn    = var.acm_certificate_arn
-  api_domain_name    = var.api_domain_name
-  zone_id            = data.aws_route53_zone.primary.zone_id
 }
 
 module "ecs_service" {
@@ -56,6 +48,9 @@ module "ecs_service" {
   desired_count             = var.desired_count
   min_capacity              = var.min_capacity
   max_capacity              = var.max_capacity
+  room_capacity             = var.room_capacity
+  redis_primary_endpoint    = module.redis.primary_endpoint_address
+  location_tracker_name     = module.location.tracker_name
 }
 
 module "redis" {
@@ -70,10 +65,7 @@ module "redis" {
 module "frontend_static" {
   source = "../../modules/frontend_static"
 
-  name_prefix                    = local.name_prefix
-  frontend_domain_name           = var.frontend_domain_name
-  zone_id                        = data.aws_route53_zone.primary.zone_id
-  cloudfront_acm_certificate_arn = var.cloudfront_acm_certificate_arn
+  name_prefix = local.name_prefix
 }
 
 module "location" {

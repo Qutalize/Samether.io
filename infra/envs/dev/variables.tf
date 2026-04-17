@@ -28,31 +28,6 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-variable "frontend_domain_name" {
-  description = "Frontend domain name."
-  type        = string
-}
-
-variable "api_domain_name" {
-  description = "API domain name."
-  type        = string
-}
-
-variable "route53_zone_name" {
-  description = "Route53 hosted zone name."
-  type        = string
-}
-
-variable "acm_certificate_arn" {
-  description = "ACM certificate ARN in the same region as the ALB."
-  type        = string
-}
-
-variable "cloudfront_acm_certificate_arn" {
-  description = "ACM certificate ARN in us-east-1 for CloudFront."
-  type        = string
-}
-
 variable "container_image" {
   description = "Full container image URI for the game server."
   type        = string
@@ -80,19 +55,25 @@ variable "ecs_memory" {
 variable "desired_count" {
   description = "Initial ECS desired count."
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "min_capacity" {
   description = "Minimum ECS service capacity."
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "max_capacity" {
   description = "Maximum ECS service capacity."
   type        = number
-  default     = 2
+  default     = 4
+}
+
+variable "room_capacity" {
+  description = "Maximum players allowed per task-local room."
+  type        = number
+  default     = 50
 }
 
 variable "redis_node_type" {

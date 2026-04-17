@@ -32,6 +32,18 @@ resource "aws_ecs_task_definition" "this" {
         {
           name  = "PORT"
           value = tostring(var.container_port)
+        },
+        {
+          name  = "ROOM_CAPACITY"
+          value = tostring(var.room_capacity)
+        },
+        {
+          name  = "REDIS_ADDR"
+          value = var.redis_primary_endpoint
+        },
+        {
+          name  = "LOCATION_TRACKER_NAME"
+          value = var.location_tracker_name
         }
       ]
       logConfiguration = {

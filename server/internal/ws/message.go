@@ -39,26 +39,27 @@ type InputPayload struct {
 // ============================================================
 
 type WelcomePayload struct {
-	PlayerID string  `json:"playerId"`
-	WorldW   float64 `json:"worldW"`
-	WorldH   float64 `json:"worldH"`
+	PlayerID string          `json:"playerId"`
+	WorldW   float64         `json:"worldW"`
+	WorldH   float64         `json:"worldH"`
+	Room     RoomInfoPayload `json:"room"`
 }
 
 type StatePayload struct {
-	Tick int64 `json:"tick"`
-	You StateYou `json:"you"`
-	Full bool `json:"full,omitempty"`
+	Tick int64    `json:"tick"`
+	You  StateYou `json:"you"`
+	Full bool     `json:"full,omitempty"`
 
 	Sharks []StateSharkView `json:"sharks,omitempty"`
-	Foods []StateFoodView `json:"foods,omitempty"`
+	Foods  []StateFoodView  `json:"foods,omitempty"`
 
-	AddedSharks []StateSharkView `json:"addedSharks,omitempty"`
+	AddedSharks   []StateSharkView `json:"addedSharks,omitempty"`
 	UpdatedSharks []StateSharkView `json:"updatedSharks,omitempty"`
-	RemovedSharks []string `json:"removedSharks,omitempty"`
+	RemovedSharks []string         `json:"removedSharks,omitempty"`
 
-	AddedFoods []StateFoodView `json:"addedFoods,omitempty"`
+	AddedFoods   []StateFoodView `json:"addedFoods,omitempty"`
 	UpdatedFoods []StateFoodView `json:"updatedFoods,omitempty"`
-	RemovedFoods []string `json:"removedFoods,omitempty"`
+	RemovedFoods []string        `json:"removedFoods,omitempty"`
 }
 
 type DeathPayload struct {
@@ -69,6 +70,18 @@ type DeathPayload struct {
 type LeaderboardPayload struct {
 	TopName  string `json:"topName"`
 	TopScore int    `json:"topScore"`
+}
+
+type RoomInfoPayload struct {
+	ID         string `json:"id"`
+	Capacity   int    `json:"capacity"`
+	Players    int    `json:"players"`
+	InstanceID string `json:"instanceId"`
+}
+
+type RoomFullPayload struct {
+	Room   RoomInfoPayload `json:"room"`
+	Reason string          `json:"reason"`
 }
 
 // ============================================================

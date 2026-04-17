@@ -4,6 +4,7 @@ client/node_modules/
 server/samezario-server
 server/internal/static/assets/*
 !server/internal/static/assets/.gitkeep
+!server/internal/static/assets/index.html
 
 # Editor
 .vscode/

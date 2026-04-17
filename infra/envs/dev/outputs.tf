@@ -6,12 +6,13 @@ output "alb_dns_name" {
   value = module.alb.alb_dns_name
 }
 
+
 output "api_url" {
-  value = "https://${var.api_domain_name}"
+  value = "http://${module.alb.alb_dns_name}"
 }
 
 output "frontend_url" {
-  value = "https://${var.frontend_domain_name}"
+  value = "https://${module.frontend_static.cloudfront_domain_name}"
 }
 
 output "redis_primary_endpoint" {
