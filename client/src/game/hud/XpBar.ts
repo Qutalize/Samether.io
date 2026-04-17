@@ -33,10 +33,10 @@ export class XpBar implements HudComponent {
     container.add(this.scoreText);
 
     this.stageText = scene.add
-      .text(22, 70, ROUTE_STAGE_NAMES[initialRoute][0], {
+      .text(22, 69, ROUTE_STAGE_NAMES[initialRoute][0], {
         fontFamily: "system-ui, sans-serif",
-        fontSize: "11px",
-        color: "#556677",
+        fontSize: "14px",
+        color: "#88bbcc",
       });
     container.add(this.stageText);
   }
