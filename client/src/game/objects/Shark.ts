@@ -188,7 +188,22 @@ export class Shark extends Phaser.GameObjects.Container {
     }
 
     this.rope.setPoints(pts);
-    
+
     this.setPosition(this.targetX, this.targetY);
+  }
+
+  playEvolutionPulse(): void {
+    const baseScale = SIZE_SCALES[this.stage] ?? 1;
+    this.scene.tweens.add({
+      targets: this,
+      scaleX: baseScale * 1.35,
+      scaleY: baseScale * 1.35,
+      duration: 200,
+      yoyo: true,
+      ease: "Sine.easeOut",
+      onComplete: () => {
+        this.setScale(baseScale);
+      },
+    });
   }
 }
