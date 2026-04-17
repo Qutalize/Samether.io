@@ -5,11 +5,19 @@ export class InputController {
   private dashBtn!: Phaser.GameObjects.Container;
   private dashPressed = false;
   private spaceKey!: Phaser.Input.Keyboard.Key;
-  
+
   private bgCircle!: Phaser.GameObjects.Arc;
   private outerRing!: Phaser.GameObjects.Arc;
   private labelText!: Phaser.GameObjects.Text;
   private cpGfx!: Phaser.GameObjects.Graphics;
+
+  /* CP (stamina) constants */
+  private static readonly CP_MAX = 100;
+  private static readonly CP_RECOVER_RATE = 10; // units per second
+  private static readonly CP_CONSUME_RATE = 50; // units per second
+
+  /* CP state */
+  private cp = InputController.CP_MAX;
   private isCpEmpty = false;
   private isExhausted = false;
 
@@ -74,7 +82,7 @@ export class InputController {
     });
 
     this.dashBtn = c;
-    this.updateCP(1.0);
+    this.renderCpGauge(1.0);
   }
 
   private updateVisualState(): void {
@@ -115,28 +123,44 @@ export class InputController {
 
   /** Returns true if dash is requested and CP is available. */
   isDashDown(): boolean {
+    return this.isDashInputActive() && !this.isExhausted && !this.isCpEmpty;
+  }
+
+  /**
+   * Advance CP (stamina) state for one frame.
+   * Must be called once per frame from GameScene.update().
+   */
+  update(delta: number): void {
     const inputActive = this.isDashInputActive();
-    
-    // Require releasing the input to clear the exhausted state
+
+    // Derive isCpEmpty from the current cp value before state transitions
+    this.isCpEmpty = this.cp <= 0;
+
+    // Clear exhausted state as soon as the input is released
     if (!inputActive) {
       this.isExhausted = false;
     }
-    
-    // Trigger exhaustion when CP runs completely empty
+
+    // Latch exhausted when CP runs completely empty
     if (this.isCpEmpty) {
       this.isExhausted = true;
     }
 
-    const effectivelyDashing = inputActive && !this.isExhausted && !this.isCpEmpty;
+    const effectivelyDashing = this.isDashDown();
+
+    if (effectivelyDashing) {
+      this.cp = Math.max(0, this.cp - InputController.CP_CONSUME_RATE * (delta / 1000));
+    } else {
+      this.cp = Math.min(InputController.CP_MAX, this.cp + InputController.CP_RECOVER_RATE * (delta / 1000));
+    }
+
+    this.renderCpGauge(this.cp / InputController.CP_MAX);
     this.updateVisualState();
-    return effectivelyDashing;
   }
 
-  /** Update the CP gauge rendering. */
-  updateCP(ratio: number): void {
+  /** Render the CP arc gauge around the dash button. */
+  private renderCpGauge(ratio: number): void {
     ratio = Math.max(0, Math.min(1, ratio));
-    this.isCpEmpty = ratio <= 0;
-    this.updateVisualState();
 
     this.cpGfx.clear();
     if (ratio <= 0) return;

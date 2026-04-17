@@ -42,12 +42,6 @@ export class GameScene extends Phaser.Scene {
   /* input */
   private input2!: InputController;
 
-  /* mock CP */
-  private mockCp = 100;
-  private mockCpMax = 100;
-  private cpRecoverRate = 10; // per second (slower recovery)
-  private cpConsumeRate = 50; // per second
-
   /* layers */
   private worldContainer!: Phaser.GameObjects.Container;
   private uiContainer!: Phaser.GameObjects.Container;
@@ -148,17 +142,8 @@ export class GameScene extends Phaser.Scene {
     /* radar sweep rotation */
     this.radarRenderer.tick(delta);
 
-    /* mock CP update */
     if (this.input2) {
-      const isDashing = this.input2.isDashDown();
-      if (isDashing && this.mockCp > 0) {
-        this.mockCp -= this.cpConsumeRate * (delta / 1000);
-        if (this.mockCp < 0) this.mockCp = 0;
-      } else if (!isDashing && this.mockCp < this.mockCpMax) {
-        this.mockCp += this.cpRecoverRate * (delta / 1000);
-        if (this.mockCp > this.mockCpMax) this.mockCp = this.mockCpMax;
-      }
-      this.input2.updateCP(this.mockCp / this.mockCpMax);
+      this.input2.update(delta);
     }
   }
 
