@@ -35,6 +35,7 @@ export class GameScene extends Phaser.Scene {
   private myId = "";
   private myName = "";
   private myRoute: SharkRoute = "attack";
+  private myStage = -1;
 
   /* entity state manager */
   private gameState!: GameState;
@@ -347,6 +348,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (m.you) {
+      if (this.myStage !== -1 && m.you.stage > this.myStage) {
+        this.cameras.main.flash(350, 255, 255, 255, false);
+        const mySv = this.gameState.getSharks().get(this.myId);
+        mySv?.playEvolutionPulse();
+      }
+      this.myStage = m.you.stage;
+
       this.cameras.main.centerOn(m.you.x, m.you.y);
       const zoom = STAGE_ZOOMS[m.you.stage] ?? 1;
       this.cameras.main.setZoom(zoom);
