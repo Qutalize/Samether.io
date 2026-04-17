@@ -26,10 +26,21 @@ func main() {
 	roomID := getenvDefault("ROOM_ID", defaultRoomID)
 	instanceID := getenvDefault("INSTANCE_ID", roomID)
 
+	redisDB := 0
+	if raw := os.Getenv("REDIS_DB"); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			redisDB = parsed
+		}
+	}
+
 	hub := sws.NewHub(sws.Config{
-		RoomID:       roomID,
-		RoomCapacity: roomCapacity,
-		InstanceID:   instanceID,
+		RoomID:        roomID,
+		RoomCapacity:  roomCapacity,
+		InstanceID:    instanceID,
+		RedisAddr:     os.Getenv("REDIS_ADDR"),
+		RedisPassword: os.Getenv("REDIS_PASSWORD"),
+		RedisDB:       redisDB,
+		RedisPrefix:   os.Getenv("REDIS_PREFIX"),
 	})
 	go hub.Run()
 

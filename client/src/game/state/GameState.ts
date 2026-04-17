@@ -104,7 +104,16 @@ export class GameState {
     // Apply the player's own chosen route; fall back to a deterministic
     // hash-based route for other players whose route the server does not send.
     const route = isSelf ? this.myRoute : (v.route ?? getDummyRoute(v.id));
-    s.updateFromState(v.x, v.y, v.angle, v.stage, this.scene.time.now, route, v.name);
+    s.updateFromState(
+      v.x,
+      v.y,
+      v.angle,
+      v.stage,
+      this.scene.time.now,
+      route,
+      v.name,
+      v.territories ?? [],
+    );
     return s;
   }
 

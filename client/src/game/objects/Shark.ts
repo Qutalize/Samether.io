@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { SharkRoute } from "../../network/protocol";
+import { TerritoryRenderer } from "./TerritoryRenderer";
 
 /* ── colours tuned to look like semi-transparent grey
       silhouettes against the dark ocean ──────────────────── */
@@ -18,6 +19,7 @@ const BASE_SPACING = 5.5;
 export class Shark extends Phaser.GameObjects.Container {
   private rope: Phaser.GameObjects.Rope;
   private nameText: Phaser.GameObjects.Text;
+  private territoryRenderer: TerritoryRenderer;
 
   private stage = 0;
   private route: SharkRoute = "attack";
@@ -45,6 +47,8 @@ export class Shark extends Phaser.GameObjects.Container {
     for (let i = 0; i < SEGMENT_COUNT; i++) {
         initialPts.push(new Phaser.Math.Vector2(i * BASE_SPACING, 0));
     }
+
+    this.territoryRenderer = new TerritoryRenderer(scene, -2);
 
     // horizontal = true maps texture width along the points
     this.rope = scene.add.rope(0, 0, "shark_small", undefined, initialPts, true);
@@ -99,6 +103,7 @@ export class Shark extends Phaser.GameObjects.Container {
     t: number,
     route: SharkRoute,
     name?: string,
+    territories: Array<Array<{ x: number; y: number }>> = [],
   ): void {
     this.targetX = x;
     this.targetY = y;
@@ -174,5 +179,11 @@ export class Shark extends Phaser.GameObjects.Container {
     this.rope.setPoints(pts);
     
     this.setPosition(this.targetX, this.targetY);
+    this.territoryRenderer.render(territories, this.route);
+  }
+
+  override destroy(fromScene?: boolean): void {
+    this.territoryRenderer.destroy();
+    super.destroy(fromScene);
   }
 }

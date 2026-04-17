@@ -23,9 +23,10 @@ type Hub struct {
 	roomCapacity int
 	instanceID   string
 
-	world       *game.World
-	leaderboard *game.Leaderboard
-	clients     map[*Client]bool
+	world            *game.World
+	leaderboard      *game.Leaderboard
+	leaderboardStore LeaderboardStore
+	clients          map[*Client]bool
 
 	register   chan *Client
 	unregister chan *Client
@@ -36,9 +37,13 @@ type Hub struct {
 }
 
 type Config struct {
-	RoomID       string
-	RoomCapacity int
-	InstanceID   string
+	RoomID        string
+	RoomCapacity  int
+	InstanceID    string
+	RedisAddr     string
+	RedisPassword string
+	RedisDB       int
+	RedisPrefix   string
 }
 
 func NewHub(cfg Config) *Hub {
@@ -55,16 +60,27 @@ func NewHub(cfg Config) *Hub {
 		cfg.InstanceID = cfg.RoomID
 	}
 
+	store := NewInMemoryLeaderboard()
+	if cfg.RedisAddr != "" {
+		redisStore, err := NewRedisLeaderboard(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB, cfg.RedisPrefix)
+		if err != nil {
+			log.Printf("failed to initialize redis leaderboard: %v", err)
+		} else {
+			store = redisStore
+		}
+	}
+
 	return &Hub{
-		roomID:       cfg.RoomID,
-		roomCapacity: cfg.RoomCapacity,
-		instanceID:   cfg.InstanceID,
-		world:        w,
-		leaderboard:  game.NewLeaderboard(),
-		clients:      make(map[*Client]bool),
-		register:     make(chan *Client),
-		unregister:   make(chan *Client, 16),
-		inbound:      make(chan inboundMsg, 256),
+		roomID:           cfg.RoomID,
+		roomCapacity:     cfg.RoomCapacity,
+		instanceID:       cfg.InstanceID,
+		world:            w,
+		leaderboard:      game.NewLeaderboard(),
+		leaderboardStore: store,
+		clients:          make(map[*Client]bool),
+		register:         make(chan *Client),
+		unregister:       make(chan *Client, 16),
+		inbound:          make(chan inboundMsg, 256),
 	}
 }
 
@@ -231,7 +247,7 @@ func (h *Hub) handleInbound(m inboundMsg) {
 			Room:     h.RoomSnapshot(),
 		})
 
-		name, score, ok := h.leaderboard.Top()
+		name, score, ok := h.leaderboardStore.Top()
 		if ok {
 			h.send(m.client, "leaderboard", LeaderboardPayload{
 				TopName:  name,
@@ -251,6 +267,11 @@ func (h *Hub) handleInbound(m inboundMsg) {
 		if p.Dash {
 			s.DashUntilTick = h.world.Tick + int64(float64(game.TickHz)*game.DashDurationSec)
 		}
+
+		if s.TrailActive && !p.Draw {
+			s.Trail = nil
+		}
+		s.TrailActive = p.Draw
 	}
 }
 
@@ -278,6 +299,7 @@ func (h *Hub) step(dt float64) {
 	}
 
 	wallDead := h.world.CheckWallDeaths()
+	territoryDead := h.world.CheckTerritoryViolations()
 	sharkDead := h.world.CheckSharkCollisions()
 	_ = h.world.ConsumeFoods()
 
@@ -287,8 +309,17 @@ func (h *Hub) step(dt float64) {
 		}
 	}
 
-	allDead := append(wallDead, sharkDead...)
-	for _, id := range allDead {
+	allDead := make(map[string]struct{}, len(wallDead)+len(territoryDead)+len(sharkDead))
+	for _, id := range wallDead {
+		allDead[id] = struct{}{}
+	}
+	for _, id := range territoryDead {
+		allDead[id] = struct{}{}
+	}
+	for _, id := range sharkDead {
+		allDead[id] = struct{}{}
+	}
+	for id := range allDead {
 		s := h.world.Sharks[id]
 		if s == nil {
 			continue
@@ -307,7 +338,15 @@ func (h *Hub) step(dt float64) {
 		}
 	}
 	if h.leaderboard.EndTick() {
-		h.broadcastLeaderboard()
+		name, score, ok := h.leaderboard.Top()
+		if ok {
+			if h.leaderboardStore.MaybeUpdate(name, score) {
+				h.broadcastLeaderboard()
+			} else {
+				// If Redis/global store did not register a top change, still send local top
+				h.broadcastLeaderboard()
+			}
+		}
 	}
 
 	for c := range h.clients {
@@ -329,7 +368,7 @@ func (h *Hub) notifyDeath(playerID string, s *game.Shark) {
 }
 
 func (h *Hub) broadcastLeaderboard() {
-	name, score, ok := h.leaderboard.Top()
+	name, score, ok := h.leaderboardStore.Top()
 	if !ok {
 		return
 	}
@@ -343,11 +382,84 @@ func (h *Hub) broadcastLeaderboard() {
 }
 
 func sharkViewEqual(a, b StateSharkView) bool {
-	return a.ID == b.ID && a.Name == b.Name && a.X == b.X && a.Y == b.Y && a.Angle == b.Angle && a.Stage == b.Stage && a.Route == b.Route
+	return a.ID == b.ID && a.Name == b.Name && a.X == b.X && a.Y == b.Y && a.Angle == b.Angle && a.Stage == b.Stage && a.Route == b.Route && territoriesEqual(a.Territories, b.Territories)
+}
+
+func territoriesEqual(a, b [][]Point) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if len(a[i]) != len(b[i]) {
+			return false
+		}
+		for j := range a[i] {
+			if a[i][j] != b[i][j] {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func foodViewEqual(a, b StateFoodView) bool {
 	return a.ID == b.ID && a.X == b.X && a.Y == b.Y && a.IsRed == b.IsRed
+}
+
+func pointInPolygon(pt game.Vec, polygon []game.Vec) bool {
+	inside := false
+	for i, j := 0, len(polygon)-1; i < len(polygon); j, i = i, i+1 {
+		a := polygon[i]
+		b := polygon[j]
+		if ((a.Y > pt.Y) != (b.Y > pt.Y)) &&
+			(pt.X < (b.X-a.X)*(pt.Y-a.Y)/(b.Y-a.Y)+a.X) {
+			inside = !inside
+		}
+	}
+	return inside
+}
+
+func segmentCircleIntersect(a, b, center game.Vec, radius float64) bool {
+	dx := b.X - a.X
+	dy := b.Y - a.Y
+	if dx == 0 && dy == 0 {
+		return center.Dist(a) <= radius
+	}
+	// Project center onto segment [a,b]
+	t := ((center.X-a.X)*dx + (center.Y-a.Y)*dy) / (dx*dx + dy*dy)
+	if t < 0 {
+		t = 0
+	} else if t > 1 {
+		t = 1
+	}
+	closest := game.Vec{X: a.X + dx*t, Y: a.Y + dy*t}
+	return closest.Dist(center) <= radius
+}
+
+func polygonIntersectsCircle(polygon []game.Vec, center game.Vec, radius float64) bool {
+	for _, v := range polygon {
+		if v.Dist(center) <= radius {
+			return true
+		}
+	}
+	for i := 0; i < len(polygon)-1; i++ {
+		if segmentCircleIntersect(polygon[i], polygon[i+1], center, radius) {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldSendShark(self, other *game.Shark, radius float64) bool {
+	if other.Head.Dist(self.Head) <= radius {
+		return true
+	}
+	for _, poly := range other.Territories {
+		if pointInPolygon(self.Head, poly) || polygonIntersectsCircle(poly, self.Head, radius) {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Hub) sendStateTo(c *Client) {
@@ -376,17 +488,26 @@ func (h *Hub) sendStateTo(c *Client) {
 	currentSharkMap := make(map[string]StateSharkView, 8)
 	currentSharks := make([]StateSharkView, 0, 8)
 	for _, s := range h.world.Sharks {
-		if !s.Alive || s.Head.Dist(self.Head) > radius {
+		if !s.Alive || !shouldSendShark(self, s, radius) {
 			continue
 		}
+		territories := make([][]Point, 0, len(s.Territories))
+		for _, poly := range s.Territories {
+			pts := make([]Point, 0, len(poly))
+			for _, p := range poly {
+				pts = append(pts, Point{X: p.X, Y: p.Y})
+			}
+			territories = append(territories, pts)
+		}
 		view := StateSharkView{
-			ID:    s.ID,
-			Name:  s.Name,
-			X:     s.Head.X,
-			Y:     s.Head.Y,
-			Angle: s.Angle,
-			Stage: s.Stage,
-			Route: s.Route,
+			ID:          s.ID,
+			Name:        s.Name,
+			X:           s.Head.X,
+			Y:           s.Head.Y,
+			Angle:       s.Angle,
+			Stage:       s.Stage,
+			Route:       s.Route,
+			Territories: territories,
 		}
 		currentSharks = append(currentSharks, view)
 		currentSharkMap[view.ID] = view
