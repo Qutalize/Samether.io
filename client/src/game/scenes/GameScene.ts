@@ -98,17 +98,6 @@ export class GameScene extends Phaser.Scene {
     this.worldContainer = this.add.container(0, 0).setDepth(0);
     this.uiContainer = this.add.container(0, 0).setDepth(1000);
 
-    /* Vignette overlay (in UI container, behind HUD) */
-    const vignetteKey = this.myRoute === "deep-sea" ? "vignette_deepsea" : "vignette_default";
-    this.vignetteOverlay = this.add.image(this.scale.width / 2, this.scale.height / 2, vignetteKey);
-    // Ensure it covers the whole screen even on ultrawide
-    const maxDim = Math.max(this.scale.width, this.scale.height);
-    this.vignetteOverlay.setDisplaySize(maxDim * 1.5, maxDim * 1.5);
-    this.vignetteOverlay.setDepth(-1); // Behind UI elements
-    this.uiContainer.add(this.vignetteOverlay);
-
-    this.ensureTextures();
-
     /* Background Shader */
     this.bgShader = this.add.shader("OceanBackground", this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height);
     this.bgShader.setScrollFactor(0);
@@ -128,6 +117,14 @@ export class GameScene extends Phaser.Scene {
     this.leaderboardPanel = new LeaderboardPanel(this, this.uiContainer);
     this.radarRenderer = new RadarRenderer(this, this.uiContainer);
 
+    /* 1. 先にテクスチャを準備（生成）しておく */
+    this.ensureTextures();
+
+    /* 2. その後で画像を作成し、正しいテクスチャを割り当てる */
+    const vignetteKey = this.myRoute === "deep-sea" ? "vignette_deepsea" : "vignette_default";
+    this.vignetteOverlay = this.add.image(this.scale.width / 2, this.scale.height / 2, vignetteKey);
+    this.vignetteOverlay.setDepth(-1); // Behind UI elements
+    this.uiContainer.add(this.vignetteOverlay);
 
     /* Camera setup: Main camera ignores UI, UI camera ignores World */
     this.uiCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height);
@@ -136,18 +133,13 @@ export class GameScene extends Phaser.Scene {
     this.uiCamera.ignore(this.worldContainer);
     this.uiCamera.ignore(this.bgContainer);
 
-    /* resize */
+    /* 3. レイアウトの初期適用 */
+    this.updateLayout(this.scale.width, this.scale.height);
+
+    /* resize handler */
     this.scale.on("resize", (sz: Phaser.Structs.Size) => {
       this.uiCamera.setSize(sz.width, sz.height);
-      if (this.bgShader) {
-        this.bgShader.setSize(sz.width, sz.height);
-        this.bgShader.setPosition(sz.width / 2, sz.height / 2);
-      }
-      if (this.vignetteOverlay) {
-        this.vignetteOverlay.setPosition(sz.width / 2, sz.height / 2);
-        const maxDim = Math.max(sz.width, sz.height);
-        this.vignetteOverlay.setDisplaySize(maxDim * 1.5, maxDim * 1.5);
-      }
+      this.updateLayout(sz.width, sz.height);
     });
 
     /* entity state manager – wires new Phaser objects into worldContainer */
@@ -166,6 +158,18 @@ export class GameScene extends Phaser.Scene {
       loop: true,
       callback: () => this.sendInput(),
     });
+  }
+
+  private updateLayout(w: number, h: number): void {
+    if (this.bgShader) {
+      this.bgShader.setSize(w, h);
+      this.bgShader.setPosition(w / 2, h / 2);
+    }
+    if (this.vignetteOverlay) {
+      this.vignetteOverlay.setPosition(w / 2, h / 2);
+      const maxDim = Math.max(w, h);
+      this.vignetteOverlay.setDisplaySize(maxDim * 1.5, maxDim * 1.5);
+    }
   }
 
   /* ════════════════════════════════════════════════════════ */
