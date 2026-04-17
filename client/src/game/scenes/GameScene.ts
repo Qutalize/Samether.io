@@ -69,7 +69,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image("shark", "shark.png");
+    this.load.image("shark",           "shark.png");
+    this.load.image("shark_mako",      "shark_mako.png");
+    this.load.image("shark_sandtiger", "shark_sandtiger.png");
+    this.load.image("shark_frilled",   "shark_frilled.png");
+    this.load.image("shark_megalodon", "shark_megalodon.png");
+    this.load.image("shark_whale",     "shark_whale.png");
+    this.load.image("shark_greenland", "shark_greenland.png");
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -187,26 +193,37 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createSharkTexture(): void {
-    if (this.textures.exists("shark_small")) return;
-    const src = this.textures.get("shark").getSourceImage() as HTMLImageElement;
-    if (!src) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = 130;
-    canvas.height = 71;
-    const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(src, 0, 0, 130, 71);
-    
-    const imgData = ctx.getImageData(0, 0, 130, 71);
-    const data = imgData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i + 3] > 0) { // If not fully transparent
-        data[i] = 255;
-        data[i + 1] = 255;
-        data[i + 2] = 255;
+    const SHARK_DEFS: Array<{ srcKey: string; outKey: string }> = [
+      { srcKey: "shark",           outKey: "shark_stage01" },
+      { srcKey: "shark_mako",      outKey: "shark_stage2_attack" },
+      { srcKey: "shark_sandtiger", outKey: "shark_stage2_nonatk" },
+      { srcKey: "shark_frilled",   outKey: "shark_stage2_deep" },
+      { srcKey: "shark_megalodon", outKey: "shark_stage4_attack" },
+      { srcKey: "shark_whale",     outKey: "shark_stage4_nonatk" },
+      { srcKey: "shark_greenland", outKey: "shark_stage4_deep" },
+    ];
+
+    for (const { srcKey, outKey } of SHARK_DEFS) {
+      if (this.textures.exists(outKey)) continue;
+      const src = this.textures.get(srcKey).getSourceImage() as HTMLImageElement;
+      if (!src) continue;
+      const canvas = document.createElement("canvas");
+      canvas.width = 130;
+      canvas.height = 71;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(src, 0, 0, 130, 71);
+      const imgData = ctx.getImageData(0, 0, 130, 71);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 0) {
+          data[i] = 255;
+          data[i + 1] = 255;
+          data[i + 2] = 255;
+        }
       }
+      ctx.putImageData(imgData, 0, 0);
+      this.textures.addCanvas(outKey, canvas);
     }
-    ctx.putImageData(imgData, 0, 0);
-    this.textures.addCanvas("shark_small", canvas);
   }
 
   /** Subtle dark ocean floor with low-frequency noise */
