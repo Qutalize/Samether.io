@@ -11,21 +11,14 @@ import type {
 import { Shark } from "../objects/Shark";
 import { Food } from "../objects/Food";
 import { InputController } from "../input";
+import { RadarRenderer } from "../hud/RadarRenderer";
+import { XpBar } from "../hud/XpBar";
+import { LeaderboardPanel } from "../hud/LeaderboardPanel";
 import { GameState } from "../state/GameState";
 
 /* ── constants ─────────────────────────────────────────────── */
-const STAGE_THRESHOLDS = [0, 10, 25, 50, 100];
 const STAGE_ZOOMS = [1.0, 0.93, 0.88, 0.82, 0.76];
 
-const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
-  "attack": ["シュモクザメ", "イタチザメ", "アオザメ", "ホオジロザメ", "メガロドン"],
-  "non-attack": ["ドチザメ", "ネムリブカ", "シロワニ", "ウバザメ", "ジンベエザメ"],
-  "deep-sea": ["ツラナガコビトザメ", "ノコギリザメ", "ラブカ", "ミツクリザメ", "ニシオンデンザメ"]
-};
-
-const RADAR_R = 90;
-const RADAR_RANGE = 1400;
-const RADAR_M = 28;
 const TAU = Math.PI * 2;
 
 /* seeded hash for ocean floor noise */
@@ -64,21 +57,10 @@ export class GameScene extends Phaser.Scene {
   private worldBorder!: Phaser.GameObjects.Graphics;
   // private oceanFloor!: Phaser.GameObjects.TileSprite;
 
-  /* HUD */
-  private xpGfx!: Phaser.GameObjects.Graphics;
-  private scoreText!: Phaser.GameObjects.Text;
-  private stageText!: Phaser.GameObjects.Text;
-  private leaderGfx!: Phaser.GameObjects.Graphics;
-  private leaderText!: Phaser.GameObjects.Text;
-
-  /* radar */
-  private radarGfx!: Phaser.GameObjects.Graphics;
-  private radarSweep = 0;
-  private lastMyX = 0;
-  private lastMyY = 0;
-  private lastMyAngle = 0;
-  private cachedSharks: { id: string; x: number; y: number }[] = [];
-  private cachedFoods: { x: number; y: number }[] = [];
+  /* HUD components */
+  private xpBar!: XpBar;
+  private leaderboardPanel!: LeaderboardPanel;
+  private radarRenderer!: RadarRenderer;
 
   /* atmosphere */
   private vignette!: Phaser.GameObjects.Image;
@@ -118,40 +100,9 @@ export class GameScene extends Phaser.Scene {
     this.uiContainer.add(this.input2.getContainer());
 
     /* ── HUD ────────────────── */
-    this.xpGfx = this.add.graphics();
-    this.uiContainer.add(this.xpGfx);
-
-    this.scoreText = this.add.text(22, 50, "", {
-      fontFamily: "system-ui, sans-serif",
-      fontSize: "15px",
-      fontStyle: "bold",
-      color: "#aabbcc",
-    });
-    this.uiContainer.add(this.scoreText);
-
-    this.stageText = this.add.text(22, 70, ROUTE_STAGE_NAMES[this.myRoute][0], {
-      fontFamily: "system-ui, sans-serif",
-      fontSize: "11px",
-      color: "#556677",
-    });
-    this.uiContainer.add(this.stageText);
-
-    /* leader panel */
-    this.leaderGfx = this.add.graphics();
-    this.uiContainer.add(this.leaderGfx);
-
-    this.leaderText = this.add.text(this.scale.width / 2, 16, "👑 Top Predator: ---", {
-      fontFamily: "system-ui, sans-serif",
-      fontSize: "17px",
-      fontStyle: "bold",
-      color: "#ffffff",
-    }).setOrigin(0.5, 0);
-    this.uiContainer.add(this.leaderText);
-    this.drawLeaderPanel();
-
-    /* radar */
-    this.radarGfx = this.add.graphics();
-    this.uiContainer.add(this.radarGfx);
+    this.xpBar = new XpBar(this, this.uiContainer, this.myRoute);
+    this.leaderboardPanel = new LeaderboardPanel(this, this.uiContainer);
+    this.radarRenderer = new RadarRenderer(this, this.uiContainer);
 
     /* vignette */
     this.createVignette();
@@ -165,8 +116,6 @@ export class GameScene extends Phaser.Scene {
 
     /* resize */
     this.scale.on("resize", (sz: Phaser.Structs.Size) => {
-      this.leaderText.setX(sz.width / 2);
-      this.drawLeaderPanel();
       this.resizeVignette(sz.width, sz.height, 1.0);
       this.uiCamera.setSize(sz.width, sz.height);
     });
@@ -197,8 +146,7 @@ export class GameScene extends Phaser.Scene {
     for (const f of this.gameState.getFoods().values()) f.tickAnim(time);
 
     /* radar sweep rotation */
-    this.radarSweep = (this.radarSweep + delta * 0.0008) % TAU;
-    this.drawRadar();
+    this.radarRenderer.tick(delta);
 
     /* mock CP update */
     if (this.input2) {
@@ -339,166 +287,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   /* ════════════════════════════════════════════════════════ */
-  /*  HUD                                                     */
-  /* ════════════════════════════════════════════════════════ */
-  private drawLeaderPanel(): void {
-    const g = this.leaderGfx;
-    g.clear();
-    const pw = 290;
-    const ph = 34;
-    const px = this.scale.width / 2 - pw / 2;
-    const py = 10;
-    g.fillStyle(0x061520, 0.8);
-    g.fillRoundedRect(px, py, pw, ph, 17);
-    g.lineStyle(1.5, 0x225588, 0.6);
-    g.strokeRoundedRect(px, py, pw, ph, 17);
-  }
-
-  private drawXPBar(xp: number, threshold: number): void {
-    const g = this.xpGfx;
-    g.clear();
-
-    const W = 310;
-    const H = 30;
-    const X = 16;
-    const Y = 18;
-    const R = 6;
-
-    /* dark background */
-    g.fillStyle(0x080808, 0.85);
-    g.fillRoundedRect(X, Y, W, H, R);
-    g.lineStyle(1.5, 0x223344, 0.6);
-    g.strokeRoundedRect(X, Y, W, H, R);
-
-    const ratio = Math.min(xp / threshold, 1.0);
-    if (ratio <= 0) return;
-    const fw = (W - 4) * ratio;
-
-    /* red fill base */
-    g.fillStyle(0xaa2020, 1);
-    g.fillRoundedRect(X + 2, Y + 2, fw, H - 4, R - 1);
-    /* brighter highlight top half */
-    g.fillStyle(0xdd4444, 0.55);
-    g.fillRoundedRect(X + 2, Y + 2, fw, (H - 4) * 0.45, R - 1);
-    /* gloss line */
-    g.fillStyle(0xff5555, 0.22);
-    g.fillRect(X + 4, Y + 3, Math.max(fw - 4, 0), 2);
-    /* leading edge glow */
-    if (fw > 6) {
-      g.fillStyle(0xff6666, 0.25);
-      g.fillRect(X + 2 + fw - 3, Y + 4, 3, H - 8);
-    }
-  }
-
-  /* ════════════════════════════════════════════════════════ */
-  /*  RADAR (sonar)                                           */
-  /* ════════════════════════════════════════════════════════ */
-  private drawRadar(): void {
-    const g = this.radarGfx;
-    g.clear();
-
-    const cx = RADAR_M + RADAR_R;
-    const cy = this.scale.height - RADAR_M - RADAR_R;
-    const r = RADAR_R;
-
-    /* dark circle background */
-    g.fillStyle(0x040e18, 0.85);
-    g.fillCircle(cx, cy, r);
-
-    /* sonar sweep trail (fading pie sector) */
-    const steps = 16;
-    const arc = Math.PI * 0.4;
-    for (let i = 0; i < steps; i++) {
-      const t = i / steps;
-      const a0 = this.radarSweep - arc * (i + 1) / steps;
-      const a1 = this.radarSweep - arc * i / steps;
-      g.fillStyle(0x22aacc, 0.1 * (1 - t));
-      g.slice(cx, cy, r - 1, a0, a1, false);
-      g.fillPath();
-    }
-
-    /* sweep line */
-    g.lineStyle(1.5, 0x44ddff, 0.35);
-    g.beginPath();
-    g.moveTo(cx, cy);
-    g.lineTo(
-      cx + Math.cos(this.radarSweep) * (r - 2),
-      cy + Math.sin(this.radarSweep) * (r - 2),
-    );
-    g.strokePath();
-
-    /* concentric grid rings */
-    g.lineStyle(0.5, 0x1a4060, 0.5);
-    g.strokeCircle(cx, cy, r * 0.33);
-    g.strokeCircle(cx, cy, r * 0.66);
-
-    /* crosshair lines */
-    g.lineStyle(0.5, 0x1a4060, 0.4);
-    g.beginPath();
-    g.moveTo(cx - r, cy);
-    g.lineTo(cx + r, cy);
-    g.moveTo(cx, cy - r);
-    g.lineTo(cx, cy + r);
-    g.strokePath();
-
-    /* outer ring */
-    g.lineStyle(2, 0x2288aa, 0.85);
-    g.strokeCircle(cx, cy, r);
-
-    const s = r / RADAR_RANGE;
-
-    /* food dots (tiny green) */
-    g.fillStyle(0x44ee88, 0.65);
-    for (const f of this.cachedFoods) {
-      const dx = (f.x - this.lastMyX) * s;
-      const dy = (f.y - this.lastMyY) * s;
-      if (dx * dx + dy * dy < (r - 2) * (r - 2)) {
-        g.fillCircle(cx + dx, cy + dy, 1.5);
-      }
-    }
-
-    /* shark blips (red with glow) */
-    for (const sh of this.cachedSharks) {
-      if (sh.id === this.myId) continue;
-      const dx = (sh.x - this.lastMyX) * s;
-      const dy = (sh.y - this.lastMyY) * s;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < (r - 4) * (r - 4)) {
-        g.fillStyle(0xff4444, 0.2);
-        g.fillCircle(cx + dx, cy + dy, 5);
-        g.fillStyle(0xff4444, 0.8);
-        g.fillCircle(cx + dx, cy + dy, 2.5);
-      }
-    }
-
-    /* player direction arrow (center) */
-    const a = this.lastMyAngle;
-    const al = 10;
-    const aw = 6;
-    const tipX = cx + Math.cos(a) * al;
-    const tipY = cy + Math.sin(a) * al;
-    const ba = a + Math.PI;
-    const lx = cx + Math.cos(ba + 0.5) * aw;
-    const ly = cy + Math.sin(ba + 0.5) * aw;
-    const rx = cx + Math.cos(ba - 0.5) * aw;
-    const ry = cy + Math.sin(ba - 0.5) * aw;
-
-    /* arrow glow */
-    g.fillStyle(0x44ddff, 0.12);
-    g.fillTriangle(
-      cx + Math.cos(a) * (al + 4),
-      cy + Math.sin(a) * (al + 4),
-      cx + Math.cos(ba + 0.55) * (aw + 3),
-      cy + Math.sin(ba + 0.55) * (aw + 3),
-      cx + Math.cos(ba - 0.55) * (aw + 3),
-      cy + Math.sin(ba - 0.55) * (aw + 3),
-    );
-    /* arrow body */
-    g.fillStyle(0x44ddff, 0.9);
-    g.fillTriangle(tipX, tipY, lx, ly, rx, ry);
-  }
-
-  /* ════════════════════════════════════════════════════════ */
   /*  WORLD BORDER                                            */
   /* ════════════════════════════════════════════════════════ */
   private drawWorldBorder(): void {
@@ -562,31 +350,21 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.setZoom(zoom);
       this.resizeVignette(this.scale.width, this.scale.height, zoom);
 
-      /* cache for radar (drawn per-frame in update) */
-      this.lastMyX = m.you.x;
-      this.lastMyY = m.you.y;
+      /* update radar blips */
       const sharks = this.gameState.getSharks();
+      const foods = this.gameState.getFoods();
       const mySv = sharks.get(this.myId);
-      if (mySv) this.lastMyAngle = mySv.angle;
-      this.cachedSharks = Array.from(sharks.entries()).map(([id, sv]) => ({
-        id,
-        x: sv.x,
-        y: sv.y,
-      }));
-      this.cachedFoods = Array.from(this.gameState.getFoods().values()).map((fv) => ({ x: fv.x, y: fv.y }));
+      this.radarRenderer.setBlips(
+        this.myId,
+        m.you.x,
+        m.you.y,
+        mySv?.angle ?? 0,
+        Array.from(sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y })),
+        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y })),
+      );
 
       /* XP bar */
-      const isMax = m.you.stage >= STAGE_THRESHOLDS.length - 1;
-      const threshold = isMax
-        ? STAGE_THRESHOLDS[STAGE_THRESHOLDS.length - 1]
-        : STAGE_THRESHOLDS[m.you.stage + 1];
-      this.drawXPBar(m.you.xp, threshold);
-      this.scoreText.setText(
-        isMax ? "MAX LEVEL" : `${m.you.xp} / ${threshold} XP`,
-      );
-      this.stageText.setText(
-        ROUTE_STAGE_NAMES[this.myRoute][Math.min(m.you.stage, ROUTE_STAGE_NAMES[this.myRoute].length - 1)],
-      );
+      this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
     }
   }
 
@@ -595,8 +373,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onLeaderboard(m: LeaderboardPayload): void {
-    this.leaderText.setText(
-      `👑 Top Predator: ${m.topName} (${m.topScore})`,
-    );
+    this.leaderboardPanel.setLeader(m.topName, m.topScore);
   }
 }
