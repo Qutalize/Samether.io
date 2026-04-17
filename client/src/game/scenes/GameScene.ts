@@ -91,7 +91,6 @@ export class GameScene extends Phaser.Scene {
     }
     
     this.cameras.main.setBackgroundColor("#001b44");
-    this.ensureTextures();
     this.createSharkTexture();
 
     /* Layers setup */
@@ -107,6 +106,8 @@ export class GameScene extends Phaser.Scene {
     this.vignetteOverlay.setDisplaySize(maxDim * 1.5, maxDim * 1.5);
     this.vignetteOverlay.setDepth(-1); // Behind UI elements
     this.uiContainer.add(this.vignetteOverlay);
+
+    this.ensureTextures();
 
     /* Background Shader */
     this.bgShader = this.add.shader("OceanBackground", this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height);
@@ -230,7 +231,7 @@ export class GameScene extends Phaser.Scene {
     }
     
     // 既存のオーバーレイがあればテクスチャを差し替える
-    if (this.vignetteOverlay) {
+    if (this.vignetteOverlay && this.vignetteOverlay.scene) {
       this.vignetteOverlay.setTexture(textureKey);
     }
   }
