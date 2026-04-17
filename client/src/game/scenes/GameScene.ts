@@ -6,8 +6,6 @@ import type {
   WelcomePayload,
   DeathPayload,
   LeaderboardPayload,
-  StateSharkView,
-  StateFoodView,
   SharkRoute,
 } from "../../network/protocol";
 import { Shark } from "../objects/Shark";
@@ -16,6 +14,7 @@ import { InputController } from "../input";
 import { RadarRenderer } from "../hud/RadarRenderer";
 import { XpBar } from "../hud/XpBar";
 import { LeaderboardPanel } from "../hud/LeaderboardPanel";
+import { GameState } from "../state/GameState";
 
 /* ── constants ─────────────────────────────────────────────── */
 const STAGE_ZOOMS = [1.0, 0.93, 0.88, 0.82, 0.76];
@@ -28,16 +27,6 @@ function hash(n: number): number {
   return s - Math.floor(s);
 }
 
-// Dummy route generator based on string hash
-function getDummyRoute(id: string): SharkRoute {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = Math.imul(31, h) + id.charCodeAt(i) | 0;
-  }
-  const routes: SharkRoute[] = ["attack", "non-attack", "deep-sea"];
-  return routes[Math.abs(h) % routes.length];
-}
-
 /* ═══════════════════════════════════════════════════════════ */
 export class GameScene extends Phaser.Scene {
   /* world */
@@ -47,9 +36,8 @@ export class GameScene extends Phaser.Scene {
   private myName = "";
   private myRoute: SharkRoute = "attack";
 
-  /* entities */
-  private sharks = new Map<string, Shark>();
-  private foods = new Map<string, Food>();
+  /* entity state manager */
+  private gameState!: GameState;
 
   /* input */
   private input2!: InputController;
@@ -132,6 +120,15 @@ export class GameScene extends Phaser.Scene {
       this.uiCamera.setSize(sz.width, sz.height);
     });
 
+    /* entity state manager – wires new Phaser objects into worldContainer */
+    this.gameState = new GameState(
+      this,
+      this.myId,
+      this.myRoute,
+      (shark: Shark) => this.worldContainer.add(shark),
+      (food: Food) => this.worldContainer.add(food),
+    );
+
     /* network */
     net.onMessage((m) => this.handleServer(m));
     this.time.addEvent({
@@ -146,7 +143,7 @@ export class GameScene extends Phaser.Scene {
   /* ════════════════════════════════════════════════════════ */
   update(time: number, delta: number): void {
     /* animate food glow */
-    for (const f of this.foods.values()) f.tickAnim(time);
+    for (const f of this.gameState.getFoods().values()) f.tickAnim(time);
 
     /* radar sweep rotation */
     this.radarRenderer.tick(delta);
@@ -327,6 +324,7 @@ export class GameScene extends Phaser.Scene {
 
   private onWelcome(m: WelcomePayload): void {
     this.myId = m.playerId;
+    this.gameState.setMyId(m.playerId);
     this.worldW = m.worldW;
     this.worldH = m.worldH;
     this.drawWorldBorder();
@@ -337,12 +335,13 @@ export class GameScene extends Phaser.Scene {
     // 確実に自分自身のIDを更新・保持する
     if (m.you && m.you.id) {
       this.myId = m.you.id;
+      this.gameState.setMyId(m.you.id);
     }
 
     if (m.full) {
-      this.applyFullState(m);
+      this.gameState.applyFullState(m);
     } else {
-      this.applyStateDelta(m);
+      this.gameState.applyStateDelta(m);
     }
 
     if (m.you) {
@@ -352,117 +351,21 @@ export class GameScene extends Phaser.Scene {
       this.resizeVignette(this.scale.width, this.scale.height, zoom);
 
       /* update radar blips */
-      const mySv = this.sharks.get(this.myId);
+      const sharks = this.gameState.getSharks();
+      const foods = this.gameState.getFoods();
+      const mySv = sharks.get(this.myId);
       this.radarRenderer.setBlips(
         this.myId,
         m.you.x,
         m.you.y,
         mySv?.angle ?? 0,
-        Array.from(this.sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y })),
-        Array.from(this.foods.values()).map((fv) => ({ x: fv.x, y: fv.y })),
+        Array.from(sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y })),
+        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y })),
       );
 
       /* XP bar */
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
     }
-  }
-
-  private applyFullState(m: StatePayload): void {
-    const seen = new Set<string>();
-    for (const v of m.sharks ?? []) {
-      seen.add(v.id);
-      let s = this.sharks.get(v.id);
-      const isSelf = v.id === this.myId;
-      if (!s) {
-        s = new Shark(this, v.x, v.y, isSelf);
-        this.sharks.set(v.id, s);
-        this.worldContainer.add(s);
-      }
-      // 強制的に自分のサメには自分が選択したルートを適用する
-      const route = isSelf ? this.myRoute : (v.route ?? getDummyRoute(v.id));
-      s.updateFromState(v.x, v.y, v.angle, v.stage, this.time.now, route, v.name);
-    }
-    for (const [id, s] of this.sharks) {
-      if (!seen.has(id)) {
-        s.destroy();
-        this.sharks.delete(id);
-      }
-    }
-
-    const seenF = new Set<string>();
-    for (const f of m.foods ?? []) {
-      seenF.add(f.id);
-      if (!this.foods.has(f.id)) {
-        const foodObj = new Food(this, f.x, f.y, f.isRed);
-        this.foods.set(f.id, foodObj);
-        this.worldContainer.add(foodObj);
-      }
-    }
-    for (const [id, f] of this.foods) {
-      if (!seenF.has(id)) {
-        f.destroy();
-        this.foods.delete(id);
-      }
-    }
-  }
-
-  private applyStateDelta(m: StatePayload): void {
-    for (const v of m.addedSharks ?? []) {
-      this.upsertShark(v);
-    }
-    for (const v of m.updatedSharks ?? []) {
-      this.upsertShark(v);
-    }
-    for (const id of m.removedSharks ?? []) {
-      this.removeShark(id);
-    }
-
-    for (const f of m.addedFoods ?? []) {
-      this.upsertFood(f);
-    }
-    for (const f of m.updatedFoods ?? []) {
-      this.upsertFood(f);
-    }
-    for (const id of m.removedFoods ?? []) {
-      this.removeFood(id);
-    }
-  }
-
-  private upsertShark(v: StateSharkView): void {
-    let s = this.sharks.get(v.id);
-    const isSelf = v.id === this.myId;
-    if (!s) {
-      s = new Shark(this, v.x, v.y, isSelf);
-      this.sharks.set(v.id, s);
-      this.worldContainer.add(s);
-    }
-    // 強制的に自分のサメには自分が選択したルートを適用する
-    const route = isSelf ? this.myRoute : (v.route ?? getDummyRoute(v.id));
-    s.updateFromState(v.x, v.y, v.angle, v.stage, this.time.now, route, v.name);
-  }
-
-  private removeShark(id: string): void {
-    const s = this.sharks.get(id);
-    if (!s) return;
-    s.destroy();
-    this.sharks.delete(id);
-  }
-
-  private upsertFood(v: StateFoodView): void {
-    let f = this.foods.get(v.id);
-    if (!f) {
-      f = new Food(this, v.x, v.y, v.isRed);
-      this.foods.set(v.id, f);
-      this.worldContainer.add(f);
-    }
-    f.setPosition(v.x, v.y);
-  }
-
-  private removeFood(id: string): void {
-    const f = this.foods.get(id);
-    if (!f) return;
-    f.destroy();
-    this.foods.delete(id);
   }
 
   private onDeath(m: DeathPayload): void {
