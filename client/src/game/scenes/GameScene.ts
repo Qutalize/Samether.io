@@ -229,19 +229,22 @@ export class GameScene extends Phaser.Scene {
       
       this.textures.addCanvas(textureKey, canvas);
     }
-    
-    // 既存のオーバーレイがあればテクスチャを差し替える
-    if (this.vignetteOverlay && this.vignetteOverlay.scene) {
-      this.vignetteOverlay.setTexture(textureKey);
-    }
   }
 
   private ensureTextures(): void {
     this.createFoodTextures();
-    // デフォルトの狭い視界
-    this.setVisionRange(0.05, 0.25, "vignette_default");
-    // 深海魚用の広い視界
-    this.setVisionRange(0.15, 0.45, "vignette_deepsea");
+    
+    // テクスチャの生成（未生成の場合のみ）
+    if (!this.textures.exists("vignette_default")) {
+      this.setVisionRange(0.05, 0.25, "vignette_default");
+    }
+    if (!this.textures.exists("vignette_deepsea")) {
+      this.setVisionRange(0.15, 0.45, "vignette_deepsea");
+    }
+
+    // 現在のルートに合わせて適用
+    const targetKey = this.myRoute === "deep-sea" ? "vignette_deepsea" : "vignette_default";
+    this.vignetteOverlay.setTexture(targetKey);
   }
 
   private createFoodTextures(): void {
