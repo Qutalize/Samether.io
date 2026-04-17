@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/samezario/server/internal/game"
+	"github.com/samezario/server/internal/session"
 )
 
 type inboundMsg struct {
@@ -62,7 +63,7 @@ func NewHub(cfg Config) *Hub {
 
 	store := NewInMemoryLeaderboard()
 	if cfg.RedisAddr != "" {
-		redisStore, err := NewRedisLeaderboard(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB, cfg.RedisPrefix)
+		redisStore, err := session.NewRedisLeaderboard(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB, cfg.RedisPrefix)
 		if err != nil {
 			log.Printf("failed to initialize redis leaderboard: %v", err)
 		} else {

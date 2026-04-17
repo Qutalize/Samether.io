@@ -4,9 +4,8 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
 
+	"github.com/samezario/server/config"
 	sstatic "github.com/samezario/server/internal/static"
 	sws "github.com/samezario/server/internal/ws"
 )
@@ -15,32 +14,16 @@ func main() {
 	addr := flag.String("addr", ":8080", "HTTP listen address")
 	flag.Parse()
 
-	roomCapacity := 50
-	if raw := os.Getenv("ROOM_CAPACITY"); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
-			roomCapacity = parsed
-		}
-	}
-
-	defaultRoomID := defaultRoomID()
-	roomID := getenvDefault("ROOM_ID", defaultRoomID)
-	instanceID := getenvDefault("INSTANCE_ID", roomID)
-
-	redisDB := 0
-	if raw := os.Getenv("REDIS_DB"); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil {
-			redisDB = parsed
-		}
-	}
+	cfg := config.Load()
 
 	hub := sws.NewHub(sws.Config{
-		RoomID:        roomID,
-		RoomCapacity:  roomCapacity,
-		InstanceID:    instanceID,
-		RedisAddr:     os.Getenv("REDIS_ADDR"),
-		RedisPassword: os.Getenv("REDIS_PASSWORD"),
-		RedisDB:       redisDB,
-		RedisPrefix:   os.Getenv("REDIS_PREFIX"),
+		RoomID:        cfg.RoomID,
+		RoomCapacity:  cfg.RoomCapacity,
+		InstanceID:    cfg.InstanceID,
+		RedisAddr:     cfg.RedisAddr,
+		RedisPassword: cfg.RedisPassword,
+		RedisDB:       cfg.RedisDB,
+		RedisPrefix:   cfg.RedisPrefix,
 	})
 	go hub.Run()
 
@@ -52,7 +35,7 @@ func main() {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok","roomId":"` + roomID + `","instanceId":"` + instanceID + `"}`))
+		_, _ = w.Write([]byte(`{"status":"ok","roomId":"` + cfg.RoomID + `","instanceId":"` + cfg.InstanceID + `"}`))
 	})
 	mux.HandleFunc("/room", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -62,23 +45,8 @@ func main() {
 	mux.HandleFunc("/ws", hub.ServeWS)
 	mux.Handle("/", http.FileServer(http.FS(sstatic.FS())))
 
-	log.Printf("samezario-server listening on %s room_id=%s capacity=%d instance_id=%s", *addr, roomID, roomCapacity, instanceID)
+	log.Printf("samezario-server listening on %s room_id=%s capacity=%d instance_id=%s", *addr, cfg.RoomID, cfg.RoomCapacity, cfg.InstanceID)
 	if err := http.ListenAndServe(*addr, mux); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func getenvDefault(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
-
-func defaultRoomID() string {
-	hostname, err := os.Hostname()
-	if err == nil && hostname != "" {
-		return hostname
-	}
-	return "room-1"
 }
