@@ -360,9 +360,9 @@ export class CPScreen extends Phaser.Scene {
       sources: {
         osm: {
           type: "raster",
-          tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+          tiles: ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"],
           tileSize: 256,
-          attribution: "&copy; OpenStreetMap contributors",
+          attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
         },
       },
       layers: [{ id: "osm", type: "raster", source: "osm" }],
