@@ -187,6 +187,7 @@ func EncodeLeaderboard(l LeaderboardPayload) []byte {
 type TerritoryPayload struct {
 	ID        string  `json:"id"`
 	SharkID   string  `json:"sharkId"`
+	Route     string  `json:"route"`
 	Level     int     `json:"level"`
 	Polygon   []Point `json:"polygon"`
 	ExpiresAt int64   `json:"expiresAt"`

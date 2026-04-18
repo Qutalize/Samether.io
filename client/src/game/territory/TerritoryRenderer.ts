@@ -7,6 +7,8 @@
 
 import * as Phaser from 'phaser';
 import { Territory, TerritoryCache, Point } from './TerritoryCache';
+import type { SharkRoute } from '../../network/protocol';
+import { getRouteColor, DANGER_COLOR } from '../config/RouteColors';
 
 export class TerritoryRenderer {
   private scene: Phaser.Scene;
@@ -14,34 +16,33 @@ export class TerritoryRenderer {
   private graphics: Phaser.GameObjects.Graphics;
   private warningIcons: Map<string, Phaser.GameObjects.Text> = new Map();
   private dangerousWarningIds: Set<string> = new Set();
+  private myRoute: SharkRoute;
 
-  // Visual settings
-  private colors = {
-    green: {
-      line: 0x00ff00,
-      fill: 0x00ff00,
-      lineAlpha: 0.8,
-      fillAlpha: 0.2,
-    },
-    orange: {
-      line: 0xff6600,
-      fill: 0xff6600,
-      lineAlpha: 0.9,
-      fillAlpha: 0.3,
-    },
-    gray: {
-      line: 0x888888,
-      fill: 0x888888,
-      lineAlpha: 0.6,
-      fillAlpha: 0.15,
-    },
+  // Visual settings for danger color
+  private dangerStyle = {
+    lineAlpha: 0.9,
+    fillAlpha: 0.3,
   };
 
-  constructor(scene: Phaser.Scene, cache: TerritoryCache) {
+  // Visual settings for route colors
+  private routeStyle = {
+    lineAlpha: 0.8,
+    fillAlpha: 0.2,
+  };
+
+  constructor(scene: Phaser.Scene, cache: TerritoryCache, myRoute: SharkRoute) {
     this.scene = scene;
     this.cache = cache;
+    this.myRoute = myRoute;
     this.graphics = scene.add.graphics();
     this.graphics.setDepth(5); // Below sharks, above background
+  }
+
+  /**
+   * Update player's route (for color changes)
+   */
+  setMyRoute(route: SharkRoute): void {
+    this.myRoute = route;
   }
 
   /**
@@ -57,12 +58,9 @@ export class TerritoryRenderer {
     const dangerousTerritories = this.cache.getDangerousTerritories();
     this.syncWarningIcons(dangerousTerritories);
 
-    // Draw territories by priority: own (green) first, then dangerous (orange)
-    this.renderTerritories(this.cache.getMyTerritories(), 'green');
-    this.renderTerritories(dangerousTerritories, 'orange');
-
-    // Optionally draw neutral territories (same level)
-    // this.renderTerritories(this.cache.getByColor('gray'), 'gray');
+    // Draw territories by priority: own (route color) first, then dangerous (orange)
+    this.renderMyTerritories(this.cache.getMyTerritories());
+    this.renderDangerousTerritories(dangerousTerritories);
   }
 
   /**
@@ -95,13 +93,25 @@ export class TerritoryRenderer {
   }
 
   /**
-   * Render territories of a specific color
+   * Render own territories with route color
    */
-  private renderTerritories(territories: Territory[], color: 'green' | 'orange' | 'gray'): void {
-    const style = this.colors[color];
+  private renderMyTerritories(territories: Territory[]): void {
+    const routeColor = getRouteColor(this.myRoute);
 
-    this.graphics.lineStyle(3, style.line, style.lineAlpha);
-    this.graphics.fillStyle(style.fill, style.fillAlpha);
+    this.graphics.lineStyle(3, routeColor, this.routeStyle.lineAlpha);
+    this.graphics.fillStyle(routeColor, this.routeStyle.fillAlpha);
+
+    for (const territory of territories) {
+      this.drawPolygon(territory.polygon);
+    }
+  }
+
+  /**
+   * Render dangerous territories with orange color
+   */
+  private renderDangerousTerritories(territories: Territory[]): void {
+    this.graphics.lineStyle(3, DANGER_COLOR, this.dangerStyle.lineAlpha);
+    this.graphics.fillStyle(DANGER_COLOR, this.dangerStyle.fillAlpha);
 
     for (const territory of territories) {
       this.drawPolygon(territory.polygon);

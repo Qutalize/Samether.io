@@ -19,6 +19,7 @@ import { LeaderboardPanel } from "../hud/LeaderboardPanel";
 import { GameState } from "../state/GameState";
 import { TerritoryManager } from "../territory/TerritoryManager";
 import { SuctionEffect } from "../effects/SuctionEffect";
+import { getRouteColor } from "../config/RouteColors";
 
 /* ── constants ─────────────────────────────────────────────── */
 const STAGE_ZOOMS = [1.0, 0.82, 0.65, 0.48, 0.35];
@@ -157,7 +158,7 @@ export class GameScene extends Phaser.Scene {
     this.radarRenderer = new RadarRenderer(this, this.uiContainer);
 
     /* ── Territory System ────────────────── */
-    this.territoryManager = new TerritoryManager(this);
+    this.territoryManager = new TerritoryManager(this, this.myRoute);
     // Will be initialized with player ID and level in onWelcome
 
     /* Camera setup: Main camera ignores UI, UI camera ignores World */
@@ -411,13 +412,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const routeColor = this.myRoute ? {
-      attack: 0xff9999,
-      "non-attack": 0x99d4ff,
-      "deep-sea": 0xd099ff,
-    }[this.myRoute] : 0x88ccff;
+    const routeColor = getRouteColor(this.myRoute);
 
-    this.trailGraphics.lineStyle(4, routeColor || 0x88ccff, 0.6);
+    this.trailGraphics.lineStyle(4, routeColor, 0.6);
     this.trailGraphics.beginPath();
     this.trailGraphics.moveTo(this.pointerTrail[0].x, this.pointerTrail[0].y);
     for (let i = 1; i < this.pointerTrail.length; i++) {
