@@ -78,6 +78,7 @@ export class GameScene extends Phaser.Scene {
 
   /* audio */
   private bgm?: Phaser.Sound.BaseSound;
+  private prevXp = 0;
 
   constructor() {
     super({ key: "GameScene" });
@@ -97,6 +98,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image("shark_whale",     "shark_whale.png");
     this.load.image("shark_greenland", "shark_greenland.png");
     this.load.audio("bgm", "bgm.mp3");
+    this.load.audio("xpse", "maou_se_system22.mp3");
     if (!this.cache.shader.has("OceanBackground")) {
       this.cache.shader.add("OceanBackground", OceanBackgroundShader);
     }
@@ -531,6 +533,12 @@ export class GameScene extends Phaser.Scene {
       );
 
       /* XP bar */
+      if (m.you.xp > this.prevXp) {
+        if (this.sound && this.cache.audio.exists("xpse")) {
+          this.sound.play("xpse", { volume: 0.5 });
+        }
+        this.prevXp = m.you.xp;
+      }
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
     }
   }
