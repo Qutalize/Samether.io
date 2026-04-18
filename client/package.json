@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build"
   },
   "dependencies": {
-    "phaser": "^3.80.1"
+    "phaser": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
