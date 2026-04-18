@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { addCp, loadCp } from "../../storage/cp";
 
-const METERS_PER_CP = 50;
+const METERS_PER_CP = 1;
 const MAX_EARN_PER_SESSION = 100;
 const GEO_TIMEOUT_MS = 10000;
 
@@ -95,7 +95,7 @@ export class CPScreen extends Phaser.Scene {
   }
 
   private handleStart(): void {
-    if (this.phase !== "idle") return;
+    if (this.phase !== "idle" && this.phase !== "done") return;
     if (!navigator.geolocation) {
       this.setStatus("位置情報が利用できません", "#ff6666");
       return;
