@@ -28,6 +28,12 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
+variable "allowed_origin" {
+  description = "Allowed origin for CORS (e.g. https://xxxx.cloudfront.net)."
+  type        = string
+  default     = ""
+}
+
 variable "container_image" {
   description = "Full container image URI for the game server."
   type        = string

@@ -7,7 +7,8 @@ export class NetClient {
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       const proto = location.protocol === "https:" ? "wss:" : "ws:";
-      const url = `${proto}//${location.host}/ws`;
+      const backendHost = import.meta.env.VITE_WS_URL ?? location.host;
+      const url = `${proto}//${backendHost}/ws`;
       const ws = new WebSocket(url);
       ws.onopen = () => {
         this.ws = ws;
