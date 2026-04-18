@@ -19,6 +19,14 @@ output "redis_primary_endpoint" {
   value = module.redis.primary_endpoint_address
 }
 
+output "github_actions_role_arn" {
+  value = module.github_oidc.role_arn
+}
+
+output "cloudfront_distribution_id" {
+  value = module.frontend_static.cloudfront_distribution_id
+}
+
 output "location_tracker_name" {
   value = module.location.tracker_name
 }
