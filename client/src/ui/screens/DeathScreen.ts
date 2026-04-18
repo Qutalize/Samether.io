@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { SharkRoute } from "../../network/protocol";
+import type { GameScene } from "../../game/scenes/GameScene";
 
 const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
   "attack": ["シュモクザメ", "イタチザメ", "アオザメ", "ホオジロザメ", "メガロドン"],
@@ -23,6 +24,12 @@ export class DeathScreen extends Phaser.Scene {
   }
 
   create(): void {
+    /* Stop BGM */
+    const gameScene = this.scene.get("GameScene") as GameScene;
+    if (gameScene && gameScene.stopBgm) {
+      gameScene.stopBgm();
+    }
+
     const { width, height } = this.scale;
 
     /* ── black overlay with fade-in ── */
