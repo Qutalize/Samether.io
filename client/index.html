@@ -67,6 +67,13 @@
       }
       setVH();
       window.addEventListener('resize', setVH);
+
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          window.scrollTo(0, 1);
+          setTimeout(setVH, 100);
+        }, 300);
+      });
     </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
