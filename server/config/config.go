@@ -7,13 +7,17 @@ import (
 )
 
 type Config struct {
-RoomID        string
-RoomCapacity  int
-InstanceID    string
-RedisAddr     string
-RedisPassword string
-RedisDB       int
-RedisPrefix   string
+RoomID              string
+RoomCapacity        int
+InstanceID          string
+RedisAddr           string
+RedisPassword       string
+RedisDB             int
+RedisPrefix         string
+LocationTrackerName string
+LocationMapName     string
+LocationMapAPIKey   string
+AWSRegion           string
 }
 
 func Load() Config {
@@ -52,6 +56,12 @@ cfg.RedisDB = parsed
 log.Printf("Warning: Invalid REDIS_DB value: %s, using default: %d", raw, cfg.RedisDB)
 }
 }
+
+// AWS Location Service configuration
+cfg.AWSRegion = getenvDefault("AWS_REGION", "ap-northeast-1")
+cfg.LocationTrackerName = os.Getenv("LOCATION_TRACKER_NAME")
+cfg.LocationMapName = os.Getenv("LOCATION_MAP_NAME")
+cfg.LocationMapAPIKey = os.Getenv("LOCATION_MAP_API_KEY")
 
 return cfg
 }

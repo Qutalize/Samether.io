@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/samezario/server/internal/cp"
 	"github.com/samezario/server/internal/game"
 	"github.com/samezario/server/internal/session"
 )
@@ -33,6 +34,8 @@ type Hub struct {
 	unregister chan *Client
 	inbound    chan inboundMsg
 
+	cpHandler *cp.Handler
+
 	nextPlayerID uint64
 	nextBotID    uint64
 }
@@ -45,6 +48,11 @@ type Config struct {
 	RedisPassword string
 	RedisDB       int
 	RedisPrefix   string
+	// AWS Location Service
+	LocationTrackerName string
+	LocationMapName     string
+	LocationMapAPIKey   string
+	AWSRegion           string
 }
 
 func NewHub(cfg Config) *Hub {
@@ -71,6 +79,22 @@ func NewHub(cfg Config) *Hub {
 		}
 	}
 
+	// CP Handler initialization
+	tracker, err := cp.NewTrackerClient(cfg.LocationTrackerName, cfg.AWSRegion)
+	if err != nil {
+		log.Printf("failed to init tracker client: %v (CP will use local mode)", err)
+	}
+	var cpStore cp.CPStore = cp.NewInMemoryCPStore()
+	if cfg.RedisAddr != "" {
+		redisCPStore, err := session.NewRedisCPStore(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+		if err != nil {
+			log.Printf("failed to init redis CP store: %v (using in-memory)", err)
+		} else {
+			cpStore = redisCPStore
+		}
+	}
+	cpHandler := cp.NewHandler(tracker, cpStore)
+
 	return &Hub{
 		roomID:           cfg.RoomID,
 		roomCapacity:     cfg.RoomCapacity,
@@ -82,6 +106,7 @@ func NewHub(cfg Config) *Hub {
 		register:         make(chan *Client),
 		unregister:       make(chan *Client, 16),
 		inbound:          make(chan inboundMsg, 256),
+		cpHandler:        cpHandler,
 	}
 }
 
@@ -187,6 +212,9 @@ func (h *Hub) Run() {
 	tick := time.NewTicker(time.Second / time.Duration(game.TickHz))
 	defer tick.Stop()
 
+	cpCleanup := time.NewTicker(1 * time.Minute)
+	defer cpCleanup.Stop()
+
 	dt := 1.0 / float64(game.TickHz)
 
 	for {
@@ -196,6 +224,12 @@ func (h *Hub) Run() {
 
 		case c := <-h.unregister:
 			if _, ok := h.clients[c]; ok {
+				// Clean up CP session on disconnect
+				if c.playerID != "" && h.cpHandler != nil {
+					if result := h.cpHandler.RemovePlayer(c.playerID); result != nil {
+						h.sendToPlayer(result.PlayerID, result.MsgType, result.Payload)
+					}
+				}
 				if c.playerID != "" {
 					delete(h.world.Sharks, c.playerID)
 				}
@@ -205,6 +239,16 @@ func (h *Hub) Run() {
 
 		case m := <-h.inbound:
 			h.handleInbound(m)
+
+		case result := <-h.cpHandler.ResultChan():
+			h.sendToPlayer(result.PlayerID, result.MsgType, result.Payload)
+
+		case <-cpCleanup.C:
+			if h.cpHandler != nil {
+				for _, result := range h.cpHandler.CleanupExpired() {
+					h.sendToPlayer(result.PlayerID, result.MsgType, result.Payload)
+				}
+			}
 
 		case <-tick.C:
 			h.step(dt)
@@ -273,6 +317,52 @@ func (h *Hub) handleInbound(m inboundMsg) {
 			s.Trail = nil
 		}
 		s.TrailActive = p.Draw
+
+	case "cp_start":
+		if h.cpHandler == nil {
+			return
+		}
+		msgType, resp := h.cpHandler.HandleStart(m.client.playerID)
+		if msgType != "" {
+			h.send(m.client, msgType, resp)
+		}
+
+	case "cp_update":
+		if h.cpHandler == nil {
+			return
+		}
+		p := payload.(CPUpdatePayload)
+		msgType, resp := h.cpHandler.HandleUpdate(m.client.playerID, p.Lat, p.Lon, p.Acc)
+		if msgType != "" {
+			h.send(m.client, msgType, resp)
+		}
+
+	case "cp_stop":
+		if h.cpHandler == nil {
+			return
+		}
+		msgType, resp := h.cpHandler.HandleStop(m.client.playerID)
+		if msgType != "" {
+			h.send(m.client, msgType, resp)
+		}
+
+	case "cp_balance":
+		if h.cpHandler == nil {
+			return
+		}
+		msgType, resp := h.cpHandler.HandleBalance(m.client.playerID)
+		if msgType != "" {
+			h.send(m.client, msgType, resp)
+		}
+	}
+}
+
+func (h *Hub) sendToPlayer(playerID string, msgType string, payload any) {
+	for c := range h.clients {
+		if c.playerID == playerID {
+			h.send(c, msgType, payload)
+			return
+		}
 	}
 }
 

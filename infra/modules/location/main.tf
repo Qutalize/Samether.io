@@ -3,3 +3,11 @@ resource "aws_location_tracker" "this" {
 
   position_filtering = "AccuracyBased"
 }
+
+resource "aws_location_map" "this" {
+  map_name = var.map_name
+
+  configuration {
+    style = "VectorEsriNavigation"
+  }
+}

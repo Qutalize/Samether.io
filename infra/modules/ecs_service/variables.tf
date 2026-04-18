@@ -66,6 +66,17 @@ variable "location_tracker_name" {
   type = string
 }
 
+variable "location_map_name" {
+  type    = string
+  default = ""
+}
+
+variable "location_map_api_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
 variable "allowed_origin" {
   type    = string
   default = ""
