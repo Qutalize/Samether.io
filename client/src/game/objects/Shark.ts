@@ -94,13 +94,14 @@ export class Shark extends Phaser.GameObjects.Container {
     this.rope.setColors(tint);
 
     // 2. Route specific glow using Phaser's standard postFX
-    if (this.rope.postFX) {
-      this.rope.postFX.clear();
+    const rope = this.rope as any; // Type assertion for Phaser 3.80 postFX API
+    if (rope.postFX) {
+      rope.postFX.clear();
       // Increase padding to ensure the outer glow doesn't get clipped by the bounds
-      this.rope.postFX.setPadding(32);
+      rope.postFX.setPadding(32);
       const glowColor = ROUTE_GLOW_COLORS[this.route];
       // addGlow(color, outerStrength, innerStrength, knockout, threshold, distance)
-      this.rope.postFX.addGlow(glowColor, 4, 0, false, 0.1, 10);
+      rope.postFX.addGlow(glowColor, 4, 0, false, 0.1, 10);
     }
   }
 
