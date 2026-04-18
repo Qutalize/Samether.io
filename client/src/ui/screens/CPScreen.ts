@@ -37,10 +37,6 @@ export class CPScreen extends Phaser.Scene {
       letterSpacing: 10,
     }).setOrigin(0.5);
 
-    if (this.titleText.postFX) {
-      this.titleText.postFX.addGlow(0x225588, 6, 0, false, 0.1, 12);
-    }
-
     this.lineGfx = this.add.graphics();
 
     this.cpDisplayText = this.add.text(0, 0, `所持 CP: ${loadCp()}`, {
@@ -77,10 +73,6 @@ export class CPScreen extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.handleStart());
-
-    if (this.startBtn.postFX) {
-      this.startBtn.postFX.addGlow(0x22aa55, 4, 0, false, 0.1, 8);
-    }
 
     this.goalBtn = this.add.text(0, 0, "[ ゴール ]", {
       fontFamily: SERIF,

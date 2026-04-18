@@ -33,10 +33,6 @@ export class LoginScreen extends Phaser.Scene {
       letterSpacing: 10,
     }).setOrigin(0.5);
 
-    if (this.titleText.postFX) {
-      this.titleText.postFX.addGlow(0x225588, 6, 0, false, 0.1, 12);
-    }
-
     this.subtitleText = this.add.text(0, 0, "Sign in to dive", {
       fontFamily: SERIF,
       color: "#4a6a8a",
@@ -64,10 +60,6 @@ export class LoginScreen extends Phaser.Scene {
       .on("pointerover", () => this.loginBtn.setColor("#88ffbb"))
       .on("pointerout", () => this.loginBtn.setColor("#44ff88"))
       .on("pointerdown", () => this.handleLogin());
-
-    if (this.loginBtn.postFX) {
-      this.loginBtn.postFX.addGlow(0x22aa55, 4, 0, false, 0.1, 8);
-    }
 
     this.registerBtn = this.add.text(0, 0, "[ 新規登録 ]", {
       fontFamily: SERIF,

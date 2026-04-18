@@ -62,10 +62,6 @@ export class DeathScreen extends Phaser.Scene {
       .setOrigin(0.5)
       .setAlpha(0);
 
-    if (this.diedText.postFX) {
-      this.diedText.postFX.addGlow(0x8b0000, 8, 0, false, 0.1, 16);
-    }
-
     this.tweens.add({
       targets: this.diedText,
       alpha: 1,

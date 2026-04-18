@@ -40,10 +40,6 @@ export class HomeScreen extends Phaser.Scene {
       letterSpacing: 10,
     }).setOrigin(0.5);
 
-    if (this.titleText.postFX) {
-      this.titleText.postFX.addGlow(0x225588, 6, 0, false, 0.1, 12);
-    }
-
     this.subtitleText = this.add.text(0, 0, `ようこそ、${this.playerName}`, {
       fontFamily: SERIF,
       fontSize: "16px",
@@ -72,10 +68,6 @@ export class HomeScreen extends Phaser.Scene {
       .on("pointerover", () => this.playBtn.setColor("#88ffbb"))
       .on("pointerout", () => this.playBtn.setColor("#44ff88"))
       .on("pointerdown", () => this.tryStart());
-
-    if (this.playBtn.postFX) {
-      this.playBtn.postFX.addGlow(0x22aa55, 4, 0, false, 0.1, 8);
-    }
 
     this.input.keyboard?.on("keydown-ENTER", () => this.tryStart());
 
