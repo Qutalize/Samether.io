@@ -539,7 +539,7 @@ export class GameScene extends Phaser.Scene {
       /* XP bar */
       if (m.you.xp > this.prevXp) {
         if (this.sound && this.cache.audio.exists("sfx_xp_gain")) {
-          this.sound.play("sfx_xp_gain", { volume: 0.5 });
+          this.sound.play("sfx_xp_gain", { volume: 1.0 });
         }
         this.prevXp = m.you.xp;
       }
