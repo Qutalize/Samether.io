@@ -13,6 +13,18 @@ const ROUTE_GLOW_COLORS: Record<SharkRoute, number> = {
   "deep-sea": 0xbb66ff    // UIと同じ紫
 };
 
+function resolveSharkTextureKey(stage: number, route: SharkRoute): string {
+  if (stage <= 1) return "shark_stage01";
+  if (stage <= 3) {
+    if (route === "attack")     return "shark_stage2_attack";
+    if (route === "non-attack") return "shark_stage2_nonatk";
+    return "shark_stage2_deep";
+  }
+  if (route === "attack")     return "shark_stage4_attack";
+  if (route === "non-attack") return "shark_stage4_nonatk";
+  return "shark_stage4_deep";
+}
+
 const SEGMENT_COUNT = 24;
 const BASE_SPACING = 5.5;
 
@@ -51,7 +63,7 @@ export class Shark extends Phaser.GameObjects.Container {
     this.territoryRenderer = new TerritoryRenderer(scene, -2);
 
     // horizontal = true maps texture width along the points
-    this.rope = scene.add.rope(0, 0, "shark_small", undefined, initialPts, true);
+    this.rope = scene.add.rope(0, 0, "shark_stage01", undefined, initialPts, true);
     this.add(this.rope);
 
     this.nameText = scene.add
@@ -72,6 +84,10 @@ export class Shark extends Phaser.GameObjects.Container {
 
   private updateColors() {
     if (!this.rope) return;
+    const texKey = resolveSharkTextureKey(this.stage, this.route);
+    if (this.rope.texture.key !== texKey) {
+      this.rope.setTexture(texKey);
+    }
     // 1. Base tint (grey silhouette)
     const color = BODY_COLORS[this.stage] ?? BODY_COLORS[0];
     const tint = this.isSelf ? color : 0x5a7a8e;
@@ -177,7 +193,7 @@ export class Shark extends Phaser.GameObjects.Container {
     }
 
     this.rope.setPoints(pts);
-    
+
     this.setPosition(this.targetX, this.targetY);
     this.territoryRenderer.render(territories, this.route);
   }
@@ -185,5 +201,20 @@ export class Shark extends Phaser.GameObjects.Container {
   override destroy(fromScene?: boolean): void {
     this.territoryRenderer.destroy();
     super.destroy(fromScene);
+  }
+
+  playEvolutionPulse(): void {
+    const baseScale = SIZE_SCALES[this.stage] ?? 1;
+    this.scene.tweens.add({
+      targets: this,
+      scaleX: baseScale * 1.35,
+      scaleY: baseScale * 1.35,
+      duration: 200,
+      yoyo: true,
+      ease: "Sine.easeOut",
+      onComplete: () => {
+        this.setScale(baseScale);
+      },
+    });
   }
 }

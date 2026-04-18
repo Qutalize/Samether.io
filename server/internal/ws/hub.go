@@ -307,6 +307,9 @@ func (h *Hub) step(dt float64) {
 	for _, s := range h.world.Sharks {
 		if s.Alive {
 			s.UpdateStage()
+
+			// Stage変更時に特性を再割り当て
+			game.AssignTraitToShark(s)
 		}
 	}
 
