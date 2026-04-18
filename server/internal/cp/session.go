@@ -11,7 +11,7 @@ const (
 	MaxCPBalance       = 10_000
 	AccuracyThreshold  = 50.0 // meters
 	MinSessionDistance  = 10.0 // meters; sessions under this yield 0 CP
-	SessionCooldown    = 5 * time.Minute
+	SessionCooldown    = 10 * time.Second
 	MetersPerCP        = 50.0
 )
 
