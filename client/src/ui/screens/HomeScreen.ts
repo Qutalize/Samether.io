@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { net } from "../../network/websocket";
 import { SharkRoute } from "../../network/protocol";
+import { loadCp } from "../../storage/cp";
 
 export class HomeScreen extends Phaser.Scene {
   private inputEl!: HTMLInputElement;
@@ -16,7 +17,7 @@ export class HomeScreen extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#001b44");
 
     this.add
-      .text(width / 2, height * 0.25, "サメザリオ", {
+      .text(width / 2, height * 0.18, "サメザリオ", {
         fontFamily: "system-ui",
         fontSize: "56px",
         color: "#88ccee",
@@ -24,7 +25,7 @@ export class HomeScreen extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height * 0.35, "Slither.io-style shark PoC", {
+      .text(width / 2, height * 0.28, "Slither.io-style shark PoC", {
         fontFamily: "system-ui",
         fontSize: "18px",
         color: "#6688aa",
@@ -42,7 +43,7 @@ export class HomeScreen extends Phaser.Scene {
     Object.assign(input.style, {
       position: "absolute",
       left: "50%",
-      top: "45%",
+      top: "38%",
       transform: "translate(-50%, -50%)",
       fontSize: "20px",
       padding: "10px 16px",
@@ -59,10 +60,10 @@ export class HomeScreen extends Phaser.Scene {
     this.inputEl = input;
 
     // Route selection UI
-    this.createRouteButtons(width / 2, height * 0.58);
+    this.createRouteButtons(width / 2, height * 0.5);
 
-    const playBtn = this.add
-      .text(width / 2, height * 0.72, "[ Play ]", {
+    this.add
+      .text(width / 2, height * 0.63, "[ Play ]", {
         fontFamily: "system-ui",
         fontSize: "32px",
         color: "#44ff88",
@@ -72,6 +73,24 @@ export class HomeScreen extends Phaser.Scene {
       .on("pointerdown", () => this.tryStart());
 
     this.input.keyboard?.on("keydown-ENTER", () => this.tryStart());
+
+    this.add
+      .text(width / 2, height * 0.75, "[ CP 獲得 ]", {
+        fontFamily: "system-ui",
+        fontSize: "22px",
+        color: "#ffaa44",
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.scene.start("CPScreen"));
+
+    this.add
+      .text(width / 2, height * 0.84, `所持 CP: ${loadCp()}`, {
+        fontFamily: "system-ui",
+        fontSize: "18px",
+        color: "#6688aa",
+      })
+      .setOrigin(0.5);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       input.remove();
