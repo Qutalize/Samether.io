@@ -12,7 +12,7 @@ export type JoinMsg = BaseMessage<"join", {
   name: string; 
   route: SharkRoute; // TODO: Server-side support is pending. Currently ignored by the server.
 }>;
-export type InputMsg = BaseMessage<"input", { angle: number; dash: boolean }>;
+export type InputMsg = BaseMessage<"input", { angle: number; dash: boolean; draw: boolean }>;
 export type ClientMsg = JoinMsg | InputMsg;
 
 // Server → Client payloads
@@ -20,6 +20,11 @@ export interface WelcomePayload {
   playerId: string;
   worldW: number;
   worldH: number;
+}
+
+export interface Point {
+  x: number;
+  y: number;
 }
 
 export interface StateSharkView {
@@ -30,6 +35,7 @@ export interface StateSharkView {
   angle: number;
   stage: number;
   route?: SharkRoute; // TODO: Server-side support is pending. Not populated from the server; client uses fallback.
+  territories?: Point[][];
 }
 
 export interface StateFoodView {

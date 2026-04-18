@@ -32,6 +32,7 @@ type JoinPayload struct {
 type InputPayload struct {
 	Angle float64 `json:"angle"`
 	Dash  bool    `json:"dash"`
+	Draw  bool    `json:"draw"`
 }
 
 // ============================================================
@@ -89,13 +90,14 @@ type RoomFullPayload struct {
 // ============================================================
 
 type StateSharkView struct {
-	ID    string  `json:"id"`
-	Name  string  `json:"name"`
-	X     float64 `json:"x"`
-	Y     float64 `json:"y"`
-	Angle float64 `json:"angle"`
-	Stage int     `json:"stage"`
-	Route string  `json:"route,omitempty"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	X           float64   `json:"x"`
+	Y           float64   `json:"y"`
+	Angle       float64   `json:"angle"`
+	Stage       int       `json:"stage"`
+	Route       string    `json:"route,omitempty"`
+	Territories [][]Point `json:"territories,omitempty"`
 }
 
 type StateFoodView struct {

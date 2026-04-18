@@ -21,6 +21,10 @@ import { GameState } from "../state/GameState";
 /* ── constants ─────────────────────────────────────────────── */
 const STAGE_ZOOMS = [1.0, 0.93, 0.88, 0.82, 0.76];
 
+const ENABLE_TRAIL_ON_HOLD = true;
+const TRAIL_POINT_SPACING = 12;
+const TRAIL_MAX_POINTS = 120;
+
 const TAU = Math.PI * 2;
 
 /* seeded hash for ocean floor noise */
@@ -59,6 +63,9 @@ export class GameScene extends Phaser.Scene {
   private xpBar!: XpBar;
   private leaderboardPanel!: LeaderboardPanel;
   private radarRenderer!: RadarRenderer;
+
+  private trailGraphics!: Phaser.GameObjects.Graphics;
+  private pointerTrail: Phaser.Math.Vector2[] = [];
 
   /* atmosphere */
   private bgShader!: Phaser.GameObjects.Shader;
@@ -113,6 +120,9 @@ export class GameScene extends Phaser.Scene {
     this.worldBorder = this.add.graphics().setDepth(0);
     this.drawWorldBorder();
     this.worldContainer.add(this.worldBorder);
+
+    this.trailGraphics = this.add.graphics().setDepth(-1);
+    this.worldContainer.add(this.trailGraphics);
 
     /* Vignette overlay – added first so it renders behind all UI elements */
     const vignetteKey = this.myRoute === "deep-sea" ? "vignette_deepsea" : "vignette_default";
@@ -191,6 +201,8 @@ export class GameScene extends Phaser.Scene {
     if (this.input2) {
       this.input2.update(delta);
     }
+
+    this.updateTrail();
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -325,6 +337,62 @@ export class GameScene extends Phaser.Scene {
   }
 
   /* ════════════════════════════════════════════════════════ */
+  /*  TRAIL                                                   */
+  /* ════════════════════════════════════════════════════════ */
+  private updateTrail(): void {
+    if (!ENABLE_TRAIL_ON_HOLD || !this.input.activePointer.isDown) {
+      this.clearTrail();
+      return;
+    }
+
+    const self = this.gameState.getSharks().get(this.myId);
+    if (!self) {
+      this.clearTrail();
+      return;
+    }
+
+    const position = new Phaser.Math.Vector2(self.x, self.y);
+    const last = this.pointerTrail[this.pointerTrail.length - 1];
+    if (!last || Phaser.Math.Distance.BetweenPoints(last, position) >= TRAIL_POINT_SPACING) {
+      this.pointerTrail.push(position.clone());
+      if (this.pointerTrail.length > TRAIL_MAX_POINTS) {
+        this.pointerTrail.shift();
+      }
+    }
+
+    this.renderTrail(self);
+  }
+
+  private renderTrail(self: Shark): void {
+    this.trailGraphics.clear();
+    if (this.pointerTrail.length < 2) {
+      return;
+    }
+
+    const routeColor = this.myRoute ? {
+      attack: 0xff9999,
+      "non-attack": 0x99d4ff,
+      "deep-sea": 0xd099ff,
+    }[this.myRoute] : 0x88ccff;
+
+    this.trailGraphics.lineStyle(4, routeColor || 0x88ccff, 0.6);
+    this.trailGraphics.beginPath();
+    this.trailGraphics.moveTo(this.pointerTrail[0].x, this.pointerTrail[0].y);
+    for (let i = 1; i < this.pointerTrail.length; i++) {
+      this.trailGraphics.lineTo(this.pointerTrail[i].x, this.pointerTrail[i].y);
+    }
+    this.trailGraphics.strokePath();
+  }
+
+  private clearTrail(): void {
+    if (this.pointerTrail.length === 0) {
+      return;
+    }
+    this.pointerTrail.length = 0;
+    this.trailGraphics.clear();
+  }
+
+  /* ════════════════════════════════════════════════════════ */
   /*  WORLD BORDER                                            */
   /* ════════════════════════════════════════════════════════ */
   private drawWorldBorder(): void {
@@ -342,7 +410,8 @@ export class GameScene extends Phaser.Scene {
     if (!net.isOpen()) return;
     const angle = this.input2.pointerAngle();
     const dash = this.input2.isDashDown();
-    net.send({ type: "input", payload: { angle, dash } });
+    const draw = this.input.activePointer.isDown;
+    net.send({ type: "input", payload: { angle, dash, draw } });
   }
 
   private handleServer(m: ServerMsg): void {

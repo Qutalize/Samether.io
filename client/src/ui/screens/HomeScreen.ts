@@ -91,13 +91,15 @@ export class HomeScreen extends Phaser.Scene {
     routes.forEach((route, index) => {
       const x = centerX + (index - 1) * spacing;
       const btn = this.add.text(x, y, route.label, {
-        fontFamily: "system-ui",
-        fontSize: "14px",
+        fontFamily: "system-ui, sans-serif",
+        fontSize: "16px",
+        fontStyle: "bold",
         color: "#ffffff",
         backgroundColor: "#113355",
         padding: { x: 10, y: 8 },
         align: "center",
       })
+      .setResolution(window.devicePixelRatio || 1)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => {
