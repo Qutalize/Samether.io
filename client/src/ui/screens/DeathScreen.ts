@@ -12,9 +12,14 @@ export class DeathScreen extends Phaser.Scene {
   private score = 0;
   private stage = 0;
   private route: SharkRoute = "attack";
+  private deathSound?: Phaser.Sound.BaseSound;
 
   constructor() {
     super({ key: "DeathScreen" });
+  }
+
+  preload(): void {
+    this.load.audio("deathse", "deathse.mp3");
   }
 
   init(data: { score: number; stage: number; route?: SharkRoute }): void {
@@ -28,6 +33,16 @@ export class DeathScreen extends Phaser.Scene {
     const gameScene = this.scene.get("GameScene") as GameScene;
     if (gameScene && gameScene.stopBgm) {
       gameScene.stopBgm();
+    }
+
+    /* Schedule death sound effect */
+    if (this.sound && this.cache.audio.exists("deathse")) {
+      this.time.delayedCall(600, () => {
+        this.deathSound = this.sound.add("deathse", { loop: false, volume: 1.0 });
+        if (this.deathSound) {
+          this.deathSound.play();
+        }
+      });
     }
 
     const { width, height } = this.scale;
