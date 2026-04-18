@@ -7,6 +7,12 @@ export class LoginScreen extends Phaser.Scene {
   private nameInput!: HTMLInputElement;
   private passwordInput!: HTMLInputElement;
   private errorText!: Phaser.GameObjects.Text;
+  private titleText!: Phaser.GameObjects.Text;
+  private subtitleText!: Phaser.GameObjects.Text;
+  private lineGfx!: Phaser.GameObjects.Graphics;
+  private loginBtn!: Phaser.GameObjects.Text;
+  private registerBtn!: Phaser.GameObjects.Text;
+  private resizeHandler!: (size: Phaser.Structs.Size) => void;
 
   constructor() {
     super({ key: "LoginScreen" });
@@ -19,110 +25,132 @@ export class LoginScreen extends Phaser.Scene {
       return;
     }
 
-    const { width, height } = this.scale;
-    const s = Math.min(height / 600, 1);
     this.cameras.main.setBackgroundColor("#030a14");
 
-    /* ── title ── */
-    const title = this.add
-      .text(width / 2, height * 0.15, "S A M E T H E R . I O", {
-        fontFamily: SERIF,
-        fontSize: `${Math.round(42 * s)}px`,
-        color: "#88ccee",
-        letterSpacing: 10,
-      })
-      .setOrigin(0.5);
+    this.titleText = this.add.text(0, 0, "S A M E T H E R . I O", {
+      fontFamily: SERIF,
+      color: "#88ccee",
+      letterSpacing: 10,
+    }).setOrigin(0.5);
 
-    if (title.postFX) {
-      title.postFX.addGlow(0x225588, 6, 0, false, 0.1, 12);
+    if (this.titleText.postFX) {
+      this.titleText.postFX.addGlow(0x225588, 6, 0, false, 0.1, 12);
     }
 
-    /* ── subtitle ── */
-    this.add
-      .text(width / 2, height * 0.24, "Sign in to dive", {
-        fontFamily: SERIF,
-        fontSize: `${Math.round(14 * s)}px`,
-        color: "#4a6a8a",
-        letterSpacing: 6,
-      })
-      .setOrigin(0.5);
+    this.subtitleText = this.add.text(0, 0, "Sign in to dive", {
+      fontFamily: SERIF,
+      color: "#4a6a8a",
+      letterSpacing: 6,
+    }).setOrigin(0.5);
 
-    /* ── accent lines ── */
-    const lineW = width * 0.45;
-    const lineX = (width - lineW) / 2;
-    const lineGfx = this.add.graphics();
-    lineGfx.lineStyle(1, 0x225588, 0.4);
-    lineGfx.beginPath();
-    lineGfx.moveTo(lineX, height * 0.30);
-    lineGfx.lineTo(lineX + lineW, height * 0.30);
-    lineGfx.strokePath();
+    this.lineGfx = this.add.graphics();
 
-    /* ── inputs ── */
-    const nameTop    = height * 0.42;
-    const passTop    = height * 0.57;
-    this.nameInput     = this.createInput("login-name",     "名前",     nameTop, 16,  false, s);
-    this.passwordInput = this.createInput("login-password", "パスワード", passTop, 32, true,  s);
+    this.nameInput = this.createInput("login-name", "名前", 16, false);
+    this.passwordInput = this.createInput("login-password", "パスワード", 32, true);
 
-    /* ── error text ── */
-    this.errorText = this.add
-      .text(width / 2, height * 0.68, "", {
-        fontFamily: SERIF,
-        fontSize: `${Math.round(13 * s)}px`,
-        color: "#ff6666",
-        align: "center",
-      })
-      .setOrigin(0.5);
+    this.errorText = this.add.text(0, 0, "", {
+      fontFamily: SERIF,
+      color: "#ff6666",
+      align: "center",
+    }).setOrigin(0.5);
 
-    /* ── login button ── */
-    const loginBtn = this.add
-      .text(width / 2, height * 0.78, "─  ログイン  ─", {
-        fontFamily: SERIF,
-        fontSize: `${Math.round(24 * s)}px`,
-        color: "#44ff88",
-        letterSpacing: 8,
-      })
+    this.loginBtn = this.add.text(0, 0, "─  ログイン  ─", {
+      fontFamily: SERIF,
+      color: "#44ff88",
+      letterSpacing: 8,
+    })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => loginBtn.setColor("#88ffbb"))
-      .on("pointerout", () => loginBtn.setColor("#44ff88"))
+      .on("pointerover", () => this.loginBtn.setColor("#88ffbb"))
+      .on("pointerout", () => this.loginBtn.setColor("#44ff88"))
       .on("pointerdown", () => this.handleLogin());
 
-    if (loginBtn.postFX) {
-      loginBtn.postFX.addGlow(0x22aa55, 4, 0, false, 0.1, 8);
+    if (this.loginBtn.postFX) {
+      this.loginBtn.postFX.addGlow(0x22aa55, 4, 0, false, 0.1, 8);
     }
 
-    /* ── register button ── */
-    this.add
-      .text(width / 2, height * 0.90, "[ 新規登録 ]", {
-        fontFamily: SERIF,
-        fontSize: `${Math.round(18 * s)}px`,
-        color: "#ffaa44",
-      })
+    this.registerBtn = this.add.text(0, 0, "[ 新規登録 ]", {
+      fontFamily: SERIF,
+      color: "#ffaa44",
+    })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.handleRegister());
 
-    /* ── focus & keyboard ── */
+    this.layout(this.scale.width, this.scale.height);
+
+    this.resizeHandler = (size: Phaser.Structs.Size) => {
+      this.layout(size.width, size.height);
+    };
+    this.scale.on("resize", this.resizeHandler);
+
     this.nameInput.focus();
     this.passwordInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") this.handleLogin();
     });
 
-    /* ── cleanup ── */
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off("resize", this.resizeHandler);
       this.nameInput.remove();
       this.passwordInput.remove();
     });
   }
 
-  /* ── HTML input helper ── */
+  private layout(width: number, height: number): void {
+    const s = Math.min(height / 600, 1);
+
+    this.titleText
+      .setPosition(width / 2, height * 0.15)
+      .setFontSize(Math.round(42 * s));
+
+    this.subtitleText
+      .setPosition(width / 2, height * 0.24)
+      .setFontSize(Math.round(14 * s));
+
+    const lineW = width * 0.45;
+    const lineX = (width - lineW) / 2;
+    const lineY = height * 0.30;
+    this.lineGfx.clear();
+    this.lineGfx.lineStyle(1, 0x225588, 0.4);
+    this.lineGfx.beginPath();
+    this.lineGfx.moveTo(lineX, lineY);
+    this.lineGfx.lineTo(lineX + lineW, lineY);
+    this.lineGfx.strokePath();
+
+    this.updateInputLayout(this.nameInput, height * 0.42, s);
+    this.updateInputLayout(this.passwordInput, height * 0.57, s);
+
+    this.errorText
+      .setPosition(width / 2, height * 0.68)
+      .setFontSize(Math.round(13 * s));
+
+    this.loginBtn
+      .setPosition(width / 2, height * 0.78)
+      .setFontSize(Math.round(24 * s));
+
+    this.registerBtn
+      .setPosition(width / 2, height * 0.90)
+      .setFontSize(Math.round(18 * s));
+  }
+
+  private updateInputLayout(input: HTMLInputElement, topPx: number, scale: number): void {
+    const fontSize = Math.round(16 * scale);
+    const padding = Math.round(10 * scale);
+    const inputW = Math.min(260, window.innerWidth * 0.7);
+
+    Object.assign(input.style, {
+      top: `${topPx}px`,
+      fontSize: `${fontSize}px`,
+      padding: `${padding}px 20px`,
+      width: `${inputW}px`,
+    } as CSSStyleDeclaration);
+  }
+
   private createInput(
     id: string,
     placeholder: string,
-    topPx: number,
     maxLength: number,
     isPassword = false,
-    scale = 1,
   ): HTMLInputElement {
     const existing = document.getElementById(id) as HTMLInputElement | null;
     if (existing) existing.remove();
@@ -132,23 +160,16 @@ export class LoginScreen extends Phaser.Scene {
     input.type = isPassword ? "password" : "text";
     input.placeholder = placeholder;
     input.maxLength = maxLength;
-    const fontSize = Math.round(16 * scale);
-    const padding  = Math.round(10 * scale);
-    const inputW   = Math.min(260, window.innerWidth * 0.7);
     Object.assign(input.style, {
       position: "absolute",
       left: "50%",
-      top: `${topPx}px`,
       transform: "translate(-50%, -50%)",
-      fontFamily: "'Times New Roman', 'Georgia', serif",
-      fontSize: `${fontSize}px`,
-      padding: `${padding}px 20px`,
+      fontFamily: SERIF,
       borderRadius: "4px",
       border: "1px solid #225588",
       background: "rgba(3, 10, 20, 0.9)",
       color: "#88ccee",
       outline: "none",
-      width: `${inputW}px`,
       textAlign: "center",
       boxShadow: "0 0 12px rgba(34, 85, 136, 0.15)",
       transition: "border-color 0.2s, box-shadow 0.2s",
@@ -168,7 +189,6 @@ export class LoginScreen extends Phaser.Scene {
     return input;
   }
 
-  /* ── auth handlers ── */
   private async handleLogin(): Promise<void> {
     const name = this.nameInput.value.trim();
     const password = this.passwordInput.value;
