@@ -103,11 +103,11 @@ export class TerritoryManager {
    */
   private onTerritoryCreated(message: TerritoryCreatedMessage): void {
     const territory: Territory = {
-      id: message.territory.id,
-      sharkId: message.territory.sharkId,
-      level: message.territory.level,
-      polygon: message.territory.polygon,
-      expiresAt: message.territory.expiresAt,
+      id: message.payload.territory.id,
+      sharkId: message.payload.territory.sharkId,
+      level: message.payload.territory.level,
+      polygon: message.payload.territory.polygon,
+      expiresAt: message.payload.territory.expiresAt,
     };
 
     console.log('[Territory] Created:', territory.id, 'Level:', territory.level);
@@ -130,15 +130,15 @@ export class TerritoryManager {
    * Handle territory_updated message
    */
   private onTerritoryUpdated(message: TerritoryUpdatedMessage): void {
-    const territory = this.cache.get(message.territoryId);
+    const territory = this.cache.get(message.payload.territoryId);
     if (!territory) return;
 
     const oldLevel = territory.level;
-    const newLevel = message.newLevel;
+    const newLevel = message.payload.newLevel;
 
-    console.log('[Territory] Updated:', message.territoryId, `Lv${oldLevel} → Lv${newLevel}`);
+    console.log('[Territory] Updated:', message.payload.territoryId, `Lv${oldLevel} → Lv${newLevel}`);
 
-    this.cache.updateLevel(message.territoryId, newLevel);
+    this.cache.updateLevel(message.payload.territoryId, newLevel);
 
     // Check if danger level changed
     if (territory.sharkId !== this.mySharkId) {
@@ -146,9 +146,9 @@ export class TerritoryManager {
       const isDangerous = newLevel > this.myLevel;
 
       if (!wasDangerous && isDangerous) {
-        this.showWarning(`領域 ${message.territoryId.substring(0, 8)} が危険になりました！`);
+        this.showWarning(`領域 ${message.payload.territoryId.substring(0, 8)} が危険になりました！`);
       } else if (wasDangerous && !isDangerous) {
-        this.showSuccess(`領域 ${message.territoryId.substring(0, 8)} が安全になりました`);
+        this.showSuccess(`領域 ${message.payload.territoryId.substring(0, 8)} が安全になりました`);
       }
     }
   }
@@ -157,8 +157,8 @@ export class TerritoryManager {
    * Handle territory_expired message
    */
   private onTerritoryExpired(message: TerritoryExpiredMessage): void {
-    console.log('[Territory] Expired:', message.territoryIds);
-    this.cache.remove(message.territoryIds);
+    console.log('[Territory] Expired:', message.payload.territoryIds);
+    this.cache.remove(message.payload.territoryIds);
   }
 
   /**
@@ -166,7 +166,7 @@ export class TerritoryManager {
    */
   private onMyEvolution(message: MyEvolutionMessage): void {
     const oldLevel = this.myLevel;
-    const newLevel = message.newLevel;
+    const newLevel = message.payload.newLevel;
 
     console.log('[Territory] Evolution:', `Lv${oldLevel} → Lv${newLevel}`);
 

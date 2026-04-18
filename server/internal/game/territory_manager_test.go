@@ -138,7 +138,7 @@ func TestTerritoryManager_CheckCollision(t *testing.T) {
 }
 
 func TestTerritoryManager_RemoveExpired(t *testing.T) {
-	tm := NewTerritoryManager(100 * time.Millisecond)
+	tm := NewTerritoryManager(1 * time.Second)
 
 	polygon := []Vec{{X: 0, Y: 0}, {X: 100, Y: 0}, {X: 100, Y: 100}, {X: 0, Y: 0}}
 
@@ -149,8 +149,8 @@ func TestTerritoryManager_RemoveExpired(t *testing.T) {
 		t.Errorf("Expected 2 territories, got %d", tm.Count())
 	}
 
-	// Wait for expiration
-	time.Sleep(150 * time.Millisecond)
+	// Wait for expiration (slightly longer than lifetime)
+	time.Sleep(1200 * time.Millisecond)
 
 	expired := tm.RemoveExpired()
 

@@ -135,17 +135,19 @@ Sent when a new territory is formed.
 ```json
 {
   "type": "territory_created",
-  "territory": {
-    "id": "shark123_territory_1681234567890",
-    "sharkId": "shark123",
-    "level": 3,
-    "polygon": [
-      {"x": 100, "y": 200},
-      {"x": 150, "y": 250},
-      {"x": 120, "y": 280},
-      {"x": 100, "y": 200}
-    ],
-    "expiresAt": 1681234600000
+  "payload": {
+    "territory": {
+      "id": "shark123_territory_1681234567890",
+      "sharkId": "shark123",
+      "level": 3,
+      "polygon": [
+        {"x": 100, "y": 200},
+        {"x": 150, "y": 250},
+        {"x": 120, "y": 280},
+        {"x": 100, "y": 200}
+      ],
+      "expiresAt": 1681234600000
+    }
   }
 }
 ```
@@ -157,9 +159,11 @@ Sent when a shark evolves and its territories level up.
 ```json
 {
   "type": "territory_updated",
-  "territoryId": "shark123_territory_1681234567890",
-  "newLevel": 4,
-  "timestamp": 1681234567890
+  "payload": {
+    "territoryId": "shark123_territory_1681234567890",
+    "newLevel": 4,
+    "timestamp": 1681234567890
+  }
 }
 ```
 
@@ -170,10 +174,12 @@ Sent when territories expire or are removed.
 ```json
 {
   "type": "territory_expired",
-  "territoryIds": [
-    "shark123_territory_1681234567890",
-    "shark456_territory_1681234570000"
-  ]
+  "payload": {
+    "territoryIds": [
+      "shark123_territory_1681234567890",
+      "shark456_territory_1681234570000"
+    ]
+  }
 }
 ```
 
@@ -184,8 +190,10 @@ Sent when the player evolves.
 ```json
 {
   "type": "my_evolution",
-  "newLevel": 3,
-  "recalculateTerritories": true
+  "payload": {
+    "newLevel": 3,
+    "recalculateTerritories": true
+  }
 }
 ```
 
