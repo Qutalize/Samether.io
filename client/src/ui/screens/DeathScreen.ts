@@ -1,24 +1,25 @@
 import Phaser from "phaser";
+import type { SharkRoute } from "../../network/protocol";
 
-const STAGE_NAMES: Record<number, string[]> = {
-  0: ["シュモクザメ", "ドチザメ", "ツラナガコビトザメ"],
-  1: ["イタチザメ", "ネムリブカ", "ノコギリザメ"],
-  2: ["アオザメ", "シロワニ", "ラブカ"],
-  3: ["ホオジロザメ", "ウバザメ", "ミツクリザメ"],
-  4: ["メガロドン", "ジンベエザメ", "ニシオンデンザメ"],
+const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
+  "attack": ["シュモクザメ", "イタチザメ", "アオザメ", "ホオジロザメ", "メガロドン"],
+  "non-attack": ["ドチザメ", "ネムリブカ", "シロワニ", "ウバザメ", "ジンベエザメ"],
+  "deep-sea": ["ツラナガコビトザメ", "ノコギリザメ", "ラブカ", "ミツクリザメ", "ニシオンデンザメ"],
 };
 
 export class DeathScreen extends Phaser.Scene {
   private score = 0;
   private stage = 0;
+  private route: SharkRoute = "attack";
 
   constructor() {
     super({ key: "DeathScreen" });
   }
 
-  init(data: { score: number; stage: number }): void {
+  init(data: { score: number; stage: number; route?: SharkRoute }): void {
     this.score = data.score;
     this.stage = data.stage;
+    this.route = data.route ?? "attack";
   }
 
   create(): void {
@@ -92,8 +93,8 @@ export class DeathScreen extends Phaser.Scene {
 
     /* ── score / stage info (fade in after main text) ── */
     const stageIndex = Math.max(0, this.stage - 1);
-    const stageName =
-      STAGE_NAMES[stageIndex]?.[0] ?? `Stage ${this.stage}`;
+    const names = ROUTE_STAGE_NAMES[this.route];
+    const stageName = names[Math.min(stageIndex, names.length - 1)];
 
     const infoText = this.add
       .text(
