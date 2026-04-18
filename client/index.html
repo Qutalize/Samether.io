@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>サメザリオ</title>
     <style>
       html, body {
@@ -13,7 +15,7 @@
         overflow: hidden;
         font-family: system-ui, sans-serif;
       }
-      #game { width: 100vw; height: 100dvh; }
+      #game { width: 100vw; height: calc(var(--vh, 1vh) * 100); }
 
       #rotate-overlay {
         display: none;
@@ -59,6 +61,13 @@
       <div class="rotate-sub">横向きでプレイしてください</div>
     </div>
     <div id="game"></div>
+    <script>
+      function setVH() {
+        document.documentElement.style.setProperty('--vh', window.innerHeight * 0.01 + 'px');
+      }
+      setVH();
+      window.addEventListener('resize', setVH);
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
