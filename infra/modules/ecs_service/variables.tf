@@ -65,3 +65,8 @@ variable "redis_primary_endpoint" {
 variable "location_tracker_name" {
   type = string
 }
+
+variable "allowed_origin" {
+  type    = string
+  default = ""
+}

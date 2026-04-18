@@ -51,6 +51,7 @@ module "ecs_service" {
   room_capacity             = var.room_capacity
   redis_primary_endpoint    = module.redis.primary_endpoint_address
   location_tracker_name     = module.location.tracker_name
+  allowed_origin            = var.allowed_origin
 }
 
 module "redis" {
