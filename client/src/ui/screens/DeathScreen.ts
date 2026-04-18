@@ -6,7 +6,6 @@ const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
   "non-attack": ["ドチザメ", "ネムリブカ", "シロワニ", "ウバザメ", "ジンベエザメ"],
   "deep-sea": ["ツラナガコビトザメ", "ノコギリザメ", "ラブカ", "ミツクリザメ", "ニシオンデンザメ"],
 };
-const debug = (msg: string) => window.__sametherDebug?.(msg);
 
 export class DeathScreen extends Phaser.Scene {
   private score = 0;
@@ -31,7 +30,6 @@ export class DeathScreen extends Phaser.Scene {
   }
 
   create(): void {
-    debug(`DeathScreen create size=${this.scale.width}x${this.scale.height}`);
     this.overlay = this.add.graphics();
     this.overlay.setAlpha(0);
     this.tweens.add({

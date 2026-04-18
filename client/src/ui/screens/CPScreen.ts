@@ -8,7 +8,6 @@ const MAX_EARN_PER_SESSION = 100;
 const GEO_TIMEOUT_MS = 10000;
 
 type Phase = "idle" | "measuring" | "finalizing" | "done";
-const debug = (msg: string) => window.__sametherDebug?.(msg);
 
 export class CPScreen extends Phaser.Scene {
   private titleText!: Phaser.GameObjects.Text;
@@ -29,7 +28,6 @@ export class CPScreen extends Phaser.Scene {
   }
 
   create(): void {
-    debug(`CPScreen create size=${this.scale.width}x${this.scale.height}`);
     this.cameras.main.setBackgroundColor("#030a14");
 
     this.titleText = this.add.text(0, 0, "C P  獲 得", {
@@ -130,7 +128,6 @@ export class CPScreen extends Phaser.Scene {
   }
 
   private handleStart(): void {
-    debug(`CPScreen handleStart phase=${this.phase}`);
     if (this.phase !== "idle" && this.phase !== "done") return;
     if (!navigator.geolocation) {
       this.setStatus("位置情報が利用できません", "#ff6666");
@@ -156,7 +153,6 @@ export class CPScreen extends Phaser.Scene {
   }
 
   private handleGoal(): void {
-    debug(`CPScreen handleGoal phase=${this.phase}`);
     if (this.phase !== "measuring" || !this.startCoords) return;
 
     this.phase = "finalizing";

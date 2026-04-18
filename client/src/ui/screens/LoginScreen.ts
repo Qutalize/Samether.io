@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import { login, register, getSession } from "../../storage/auth";
 
 const SERIF = "'Times New Roman', 'Georgia', serif";
-const debug = (msg: string) => window.__sametherDebug?.(msg);
 
 export class LoginScreen extends Phaser.Scene {
   private nameInput!: HTMLInputElement;
@@ -20,10 +19,8 @@ export class LoginScreen extends Phaser.Scene {
   }
 
   create(): void {
-    debug(`LoginScreen create size=${this.scale.width}x${this.scale.height}`);
     const session = getSession();
     if (session) {
-      debug("LoginScreen session found -> HomeScreen");
       this.scene.start("HomeScreen");
       return;
     }
@@ -185,7 +182,6 @@ export class LoginScreen extends Phaser.Scene {
   }
 
   private async handleLogin(): Promise<void> {
-    debug("LoginScreen handleLogin");
     const name = this.nameInput.value.trim();
     const password = this.passwordInput.value;
     const result = await login(name, password);
@@ -197,7 +193,6 @@ export class LoginScreen extends Phaser.Scene {
   }
 
   private async handleRegister(): Promise<void> {
-    debug("LoginScreen handleRegister");
     const name = this.nameInput.value.trim();
     const password = this.passwordInput.value;
     const result = await register(name, password);
