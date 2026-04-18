@@ -226,15 +226,9 @@ export class LoginScreen extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const hitArea = new Phaser.Geom.Rectangle(
-      x - w / 2,
-      y - h / 2,
-      w,
-      h,
-    );
-    const hitZone = this.add
+    this.add
       .zone(x, y, w, h)
-      .setInteractive({ hitArea, hitAreaCallback: Phaser.Geom.Rectangle.Contains, useHandCursor: true })
+      .setInteractive({ useHandCursor: true })
       .on("pointerover", () => {
         bg.clear();
         bg.fillStyle(bgColor, 1.0);
