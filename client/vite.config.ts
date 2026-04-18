@@ -5,6 +5,9 @@ import dns from "dns";
 dns.setDefaultResultOrder("ipv4first");
 
 export default defineConfig({
+  esbuild: {
+    target: "es2019",
+  },
   server: {
     port: 5173,
     host: "0.0.0.0", // すべてのインターフェースで待ち受け
@@ -19,6 +22,7 @@ export default defineConfig({
     },
   },
   build: {
+    target: "es2019",
     outDir: "dist",
     emptyOutDir: true,
   },
