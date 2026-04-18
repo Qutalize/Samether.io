@@ -118,7 +118,7 @@ func (tm *TerritoryManager) RemoveExpired() []string {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 	expired := make([]string, 0)
 
 	for id, territory := range tm.territories {
