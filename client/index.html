@@ -99,6 +99,24 @@
         cursor: pointer;
         font-family: 'Times New Roman', 'Georgia', serif;
       }
+
+      #debug-overlay {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 20000;
+        max-width: min(92vw, 520px);
+        max-height: 42vh;
+        overflow: auto;
+        padding: 8px 10px;
+        background: rgba(0, 0, 0, 0.78);
+        color: #7CFFB2;
+        border: 1px solid rgba(124, 255, 178, 0.35);
+        border-radius: 6px;
+        font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
@@ -115,8 +133,33 @@
       </div>
       <div id="pwa-banner-close">[ 閉じる ]</div>
     </div>
+    <div id="debug-overlay"></div>
     <div id="game"></div>
     <script>
+      (function () {
+        const debugEl = document.getElementById('debug-overlay');
+        const lines = [];
+        function write(msg) {
+          const stamp = new Date().toISOString().slice(11, 19);
+          lines.push('[' + stamp + '] ' + msg);
+          if (lines.length > 24) lines.shift();
+          if (debugEl) debugEl.textContent = lines.join('\n');
+        }
+        window.__sametherDebug = write;
+        write('boot ua=' + navigator.userAgent);
+        write('screen=' + window.innerWidth + 'x' + window.innerHeight);
+        window.addEventListener('error', function (event) {
+          write('error: ' + (event.message || 'unknown'));
+        });
+        window.addEventListener('unhandledrejection', function (event) {
+          const reason = event.reason;
+          write('reject: ' + (reason && reason.message ? reason.message : String(reason)));
+        });
+        window.addEventListener('resize', function () {
+          write('resize=' + window.innerWidth + 'x' + window.innerHeight);
+        });
+      })();
+
       function setVH() {
         document.documentElement.style.setProperty('--vh', window.innerHeight * 0.01 + 'px');
       }

@@ -5,6 +5,7 @@ import { loadCp } from "../../storage/cp";
 import { getSession, logout } from "../../storage/auth";
 
 const SERIF = "'Times New Roman', 'Georgia', serif";
+const debug = (msg: string) => window.__sametherDebug?.(msg);
 
 export class HomeScreen extends Phaser.Scene {
   private playerName = "";
@@ -24,8 +25,10 @@ export class HomeScreen extends Phaser.Scene {
   }
 
   create(): void {
+    debug(`HomeScreen create size=${this.scale.width}x${this.scale.height}`);
     const session = getSession();
     if (!session) {
+      debug("HomeScreen no session -> LoginScreen");
       this.scene.start("LoginScreen");
       return;
     }
@@ -177,6 +180,7 @@ export class HomeScreen extends Phaser.Scene {
   }
 
   private async tryStart(): Promise<void> {
+    debug(`HomeScreen tryStart route=${this.selectedRoute}`);
     try {
       if (!net.isOpen()) await net.connect();
       net.send({ type: "join", payload: { name: this.playerName, route: this.selectedRoute } });
