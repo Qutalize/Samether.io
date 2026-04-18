@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/shark.png" />
     <title>サメザリオ</title>
     <style>
       html, body {
@@ -52,6 +55,43 @@
       @media (orientation: portrait) {
         #rotate-overlay { display: flex; }
       }
+
+      #pwa-banner {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 10000;
+        background: rgba(3, 10, 20, 0.95);
+        border-top: 1px solid #225588;
+        padding: 16px 20px;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        font-family: 'Times New Roman', 'Georgia', serif;
+        color: #88ccee;
+        text-align: center;
+      }
+      #pwa-banner .banner-title {
+        font-size: 14px;
+        letter-spacing: 3px;
+        color: #88ccee;
+      }
+      #pwa-banner .banner-sub {
+        font-size: 12px;
+        letter-spacing: 2px;
+        color: #4a6a8a;
+        line-height: 1.6;
+      }
+      #pwa-banner-close {
+        margin-top: 4px;
+        font-size: 12px;
+        color: #ff6666;
+        letter-spacing: 2px;
+        cursor: pointer;
+        font-family: 'Times New Roman', 'Georgia', serif;
+      }
     </style>
   </head>
   <body>
@@ -59,6 +99,14 @@
       <div class="rotate-icon">🦈</div>
       <div class="rotate-title">S A M E T H E R . I O</div>
       <div class="rotate-sub">横向きでプレイしてください</div>
+    </div>
+    <div id="pwa-banner">
+      <div class="banner-title">🦈 フルスクリーンでプレイ</div>
+      <div class="banner-sub">
+        画面下の 共有ボタン →「ホーム画面に追加」<br>
+        するとアドレスバーなしでプレイできます
+      </div>
+      <div id="pwa-banner-close">[ 閉じる ]</div>
     </div>
     <div id="game"></div>
     <script>
@@ -68,12 +116,22 @@
       setVH();
       window.addEventListener('resize', setVH);
 
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          window.scrollTo(0, 1);
-          setTimeout(setVH, 100);
-        }, 300);
-      });
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+      }
+
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const isStandalone = window.navigator.standalone === true;
+      if (isIOS && !isStandalone && !sessionStorage.getItem('pwa-banner-shown')) {
+        sessionStorage.setItem('pwa-banner-shown', '1');
+        const banner = document.getElementById('pwa-banner');
+        if (banner) {
+          banner.style.display = 'flex';
+          document.getElementById('pwa-banner-close')?.addEventListener('click', function() {
+            banner.style.display = 'none';
+          });
+        }
+      }
     </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
