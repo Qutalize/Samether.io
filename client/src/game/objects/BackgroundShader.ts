@@ -97,7 +97,8 @@ void main() {
 }
 `;
 
-export const OceanBackgroundShader = new Phaser.Display.BaseShader(
+// Type assertion for Phaser 3.90 BaseShader API
+export const OceanBackgroundShader = new (Phaser.Display.BaseShader as any)(
   "OceanBackground",
   fragShader,
   undefined,

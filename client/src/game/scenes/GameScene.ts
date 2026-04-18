@@ -102,7 +102,7 @@ export class GameScene extends Phaser.Scene {
   /*  CREATE                                                  */
   /* ════════════════════════════════════════════════════════ */
   create(): void {
-    const renderer = this.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
+    const renderer = this.renderer as any; // Type assertion for Phaser 3.90 WebGL API
     if (renderer.pipelines) {
       renderer.pipelines.addPostPipeline("SharkShader", SharkPipeline);
     }
