@@ -76,6 +76,9 @@ module "github_oidc" {
   name_prefix          = local.name_prefix
   github_repo          = "Qutalize/Samether.io"
   frontend_bucket_name = module.frontend_static.bucket_name
+  ecr_repository_arn   = module.ecr.repository_arn
+  ecs_cluster_name     = "${local.name_prefix}-cluster"
+  ecs_service_name     = "${local.name_prefix}-service"
 }
 
 module "location" {
