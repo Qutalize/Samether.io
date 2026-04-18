@@ -5,6 +5,7 @@
  * Handles territory creation, updates, and expiration events.
  */
 
+import Phaser from 'phaser';
 import { TerritoryCache, Territory, Point } from './TerritoryCache';
 import { TerritoryRenderer } from './TerritoryRenderer';
 
