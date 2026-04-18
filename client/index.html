@@ -14,10 +14,19 @@
         font-family: system-ui, sans-serif;
       }
       #game { width: 100vw; height: 100vh; }
+      #cp-map {
+        display: none;
+        position: absolute;
+        top: 0; left: 0;
+        width: 100vw; height: 50vh;
+        z-index: 10;
+      }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
   </head>
   <body>
     <div id="game"></div>
+    <div id="cp-map"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

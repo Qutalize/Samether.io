@@ -14,7 +14,11 @@ export default defineConfig({
       "/ws": {
         target: "ws://127.0.0.1:8080",
         ws: true,
-        changeOrigin: true, // プロキシ先とオリジンが異なる場合の遅延を防止
+        changeOrigin: true,
+      },
+      "/api": {
+        target: "http://127.0.0.1:8080",
+        changeOrigin: true,
       },
     },
   },
