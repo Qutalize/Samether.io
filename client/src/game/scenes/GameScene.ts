@@ -99,6 +99,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image("shark_greenland", "shark_greenland.png");
     this.load.audio("bgm", "bgm.mp3");
     this.load.audio("sfx_xp_gain", "sfx_xp_gain.mp3");
+    this.load.audio("sfx_levelup", "sfx_levelup.mp3");
     if (!this.cache.shader.has("OceanBackground")) {
       this.cache.shader.add("OceanBackground", OceanBackgroundShader);
     }
@@ -509,6 +510,9 @@ export class GameScene extends Phaser.Scene {
 
     if (m.you) {
       if (this.myStage !== -1 && m.you.stage > this.myStage) {
+        if (this.sound && this.cache.audio.exists("sfx_levelup")) {
+          this.sound.play("sfx_levelup", { volume: 1.0 });
+        }
         this.cameras.main.flash(350, 255, 255, 255, false);
         const mySv = this.gameState.getSharks().get(this.myId);
         mySv?.playEvolutionPulse();
