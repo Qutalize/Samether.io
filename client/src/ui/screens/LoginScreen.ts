@@ -20,13 +20,14 @@ export class LoginScreen extends Phaser.Scene {
     }
 
     const { width, height } = this.scale;
+    const s = Math.min(height / 600, 1);
     this.cameras.main.setBackgroundColor("#030a14");
 
     /* ── title ── */
     const title = this.add
-      .text(width / 2, height * 0.18, "S A M E T H E R . I O", {
+      .text(width / 2, height * 0.15, "S A M E T H E R . I O", {
         fontFamily: SERIF,
-        fontSize: "52px",
+        fontSize: `${Math.round(42 * s)}px`,
         color: "#88ccee",
         letterSpacing: 10,
       })
@@ -38,9 +39,9 @@ export class LoginScreen extends Phaser.Scene {
 
     /* ── subtitle ── */
     this.add
-      .text(width / 2, height * 0.26, "Sign in to dive", {
+      .text(width / 2, height * 0.24, "Sign in to dive", {
         fontFamily: SERIF,
-        fontSize: "16px",
+        fontSize: `${Math.round(14 * s)}px`,
         color: "#4a6a8a",
         letterSpacing: 6,
       })
@@ -57,20 +58,16 @@ export class LoginScreen extends Phaser.Scene {
     lineGfx.strokePath();
 
     /* ── inputs ── */
-    this.nameInput = this.createInput("login-name", "名前", "38%", 16);
-    this.passwordInput = this.createInput(
-      "login-password",
-      "パスワード",
-      "46%",
-      32,
-      true,
-    );
+    const nameTop    = height * 0.42;
+    const passTop    = height * 0.57;
+    this.nameInput     = this.createInput("login-name",     "名前",     nameTop, 16,  false, s);
+    this.passwordInput = this.createInput("login-password", "パスワード", passTop, 32, true,  s);
 
     /* ── error text ── */
     this.errorText = this.add
-      .text(width / 2, height * 0.54, "", {
+      .text(width / 2, height * 0.68, "", {
         fontFamily: SERIF,
-        fontSize: "14px",
+        fontSize: `${Math.round(13 * s)}px`,
         color: "#ff6666",
         align: "center",
       })
@@ -78,9 +75,9 @@ export class LoginScreen extends Phaser.Scene {
 
     /* ── login button ── */
     const loginBtn = this.add
-      .text(width / 2, height * 0.62, "─  ログイン  ─", {
+      .text(width / 2, height * 0.78, "─  ログイン  ─", {
         fontFamily: SERIF,
-        fontSize: "28px",
+        fontSize: `${Math.round(24 * s)}px`,
         color: "#44ff88",
         letterSpacing: 8,
       })
@@ -96,9 +93,9 @@ export class LoginScreen extends Phaser.Scene {
 
     /* ── register button ── */
     this.add
-      .text(width / 2, height * 0.72, "[ 新規登録 ]", {
+      .text(width / 2, height * 0.90, "[ 新規登録 ]", {
         fontFamily: SERIF,
-        fontSize: "22px",
+        fontSize: `${Math.round(18 * s)}px`,
         color: "#ffaa44",
       })
       .setOrigin(0.5)
@@ -122,9 +119,10 @@ export class LoginScreen extends Phaser.Scene {
   private createInput(
     id: string,
     placeholder: string,
-    top: string,
+    topPx: number,
     maxLength: number,
     isPassword = false,
+    scale = 1,
   ): HTMLInputElement {
     const existing = document.getElementById(id) as HTMLInputElement | null;
     if (existing) existing.remove();
@@ -134,20 +132,23 @@ export class LoginScreen extends Phaser.Scene {
     input.type = isPassword ? "password" : "text";
     input.placeholder = placeholder;
     input.maxLength = maxLength;
+    const fontSize = Math.round(16 * scale);
+    const padding  = Math.round(10 * scale);
+    const inputW   = Math.min(260, window.innerWidth * 0.7);
     Object.assign(input.style, {
       position: "absolute",
       left: "50%",
-      top,
+      top: `${topPx}px`,
       transform: "translate(-50%, -50%)",
       fontFamily: "'Times New Roman', 'Georgia', serif",
-      fontSize: "18px",
-      padding: "12px 20px",
+      fontSize: `${fontSize}px`,
+      padding: `${padding}px 20px`,
       borderRadius: "4px",
       border: "1px solid #225588",
       background: "rgba(3, 10, 20, 0.9)",
       color: "#88ccee",
       outline: "none",
-      width: "260px",
+      width: `${inputW}px`,
       textAlign: "center",
       boxShadow: "0 0 12px rgba(34, 85, 136, 0.15)",
       transition: "border-color 0.2s, box-shadow 0.2s",
