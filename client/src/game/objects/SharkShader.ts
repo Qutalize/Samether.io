@@ -75,14 +75,16 @@ export class SharkPipeline extends BasePipeline {
   }
 
   onPreRender() {
-    (this as any).setTime("uTime");
-    (this as any).set3f(
+    // Phaser 3.80 PostFXPipeline methods
+    const pipeline = this as any;
+    pipeline.set1f("uTime", pipeline.game.loop.time);
+    pipeline.set3f(
       "uColor",
       this._color.red / 255,
       this._color.green / 255,
       this._color.blue / 255,
     );
-    (this as any).set3f(
+    pipeline.set3f(
       "uBellyColor",
       this._bellyColor.red / 255,
       this._bellyColor.green / 255,

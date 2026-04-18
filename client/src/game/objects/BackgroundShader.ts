@@ -97,12 +97,9 @@ void main() {
 }
 `;
 
-// Type assertion for Phaser 3.90 BaseShader API
+// Phaser 3.80 BaseShader expects (key, fragmentSrc, vertexSrc, uniforms)
+// But uniforms are set separately via setUniform after instantiation
 export const OceanBackgroundShader = new (Phaser.Display.BaseShader as any)(
   "OceanBackground",
-  fragShader,
-  undefined,
-  {
-    uScroll: { type: "2f", value: { x: 0, y: 0 } }
-  }
+  fragShader
 );

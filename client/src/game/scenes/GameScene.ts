@@ -17,6 +17,7 @@ import { RadarRenderer } from "../hud/RadarRenderer";
 import { XpBar } from "../hud/XpBar";
 import { LeaderboardPanel } from "../hud/LeaderboardPanel";
 import { GameState } from "../state/GameState";
+import { TerritoryManager } from "../territory/TerritoryManager";
 import { SuctionEffect } from "../effects/SuctionEffect";
 
 /* ── constants ─────────────────────────────────────────────── */
@@ -102,9 +103,11 @@ export class GameScene extends Phaser.Scene {
   /*  CREATE                                                  */
   /* ════════════════════════════════════════════════════════ */
   create(): void {
-    const renderer = this.renderer as any; // Type assertion for Phaser 3.90 WebGL API
-    if (renderer.pipelines) {
-      renderer.pipelines.addPostPipeline("SharkShader", SharkPipeline);
+    // Register custom shader pipeline for Phaser 3.80
+    const renderer = this.renderer as any;
+    if (renderer.pipelines && !renderer.pipelines.get("SharkShader")) {
+      const pipelineInstance = new SharkPipeline(this.game);
+      renderer.pipelines.add("SharkShader", pipelineInstance);
     }
 
     this.cameras.main.setBackgroundColor("#001b44");
@@ -119,6 +122,7 @@ export class GameScene extends Phaser.Scene {
     /* Background Shader */
     this.bgShader = this.add.shader("OceanBackground", this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height);
     this.bgShader.setScrollFactor(0);
+    this.bgShader.setUniform('uScroll.value', { x: 0, y: 0 });
     this.bgContainer.add(this.bgShader);
 
     /* world boundary */
