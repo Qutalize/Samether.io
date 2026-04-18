@@ -2,10 +2,12 @@ import Phaser from "phaser";
 import { net } from "../../network/websocket";
 import { SharkRoute } from "../../network/protocol";
 
+const SERIF = "'Times New Roman', 'Georgia', serif";
+
 export class HomeScreen extends Phaser.Scene {
   private inputEl!: HTMLInputElement;
   private pendingName = "";
-  private selectedRoute: SharkRoute = "attack"; // Default route
+  private selectedRoute: SharkRoute = "attack";
 
   constructor() {
     super({ key: "HomeScreen" });
@@ -13,25 +15,43 @@ export class HomeScreen extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
-    this.cameras.main.setBackgroundColor("#001b44");
+    this.cameras.main.setBackgroundColor("#030a14");
 
-    this.add
-      .text(width / 2, height * 0.25, "サメザリオ", {
-        fontFamily: "system-ui",
-        fontSize: "56px",
+    /* ── title ── */
+    const title = this.add
+      .text(width / 2, height * 0.22, "S A M E T H E R . I O", {
+        fontFamily: SERIF,
+        fontSize: "52px",
         color: "#88ccee",
+        letterSpacing: 10,
       })
       .setOrigin(0.5);
 
+    if (title.postFX) {
+      title.postFX.addGlow(0x225588, 6, 0, false, 0.1, 12);
+    }
+
+    /* ── subtitle ── */
     this.add
-      .text(width / 2, height * 0.35, "Slither.io-style shark PoC", {
-        fontFamily: "system-ui",
-        fontSize: "18px",
-        color: "#6688aa",
+      .text(width / 2, height * 0.30, "─  深海のサバイバル  ─", {
+        fontFamily: SERIF,
+        fontSize: "16px",
+        color: "#4a6a8a",
+        letterSpacing: 6,
       })
       .setOrigin(0.5);
 
-    // Name input: overlay a real HTML input.
+    /* ── accent lines ── */
+    const lineW = width * 0.45;
+    const lineX = (width - lineW) / 2;
+    const lineGfx = this.add.graphics();
+    lineGfx.lineStyle(1, 0x225588, 0.4);
+    lineGfx.beginPath();
+    lineGfx.moveTo(lineX, height * 0.34);
+    lineGfx.lineTo(lineX + lineW, height * 0.34);
+    lineGfx.strokePath();
+
+    /* ── name input (HTML overlay) ── */
     const existing = document.getElementById("name-input") as HTMLInputElement | null;
     if (existing) existing.remove();
     const input = document.createElement("input");
@@ -42,34 +62,44 @@ export class HomeScreen extends Phaser.Scene {
     Object.assign(input.style, {
       position: "absolute",
       left: "50%",
-      top: "45%",
+      top: "42%",
       transform: "translate(-50%, -50%)",
-      fontSize: "20px",
+      fontFamily: "'Times New Roman', 'Georgia', serif",
+      fontSize: "18px",
       padding: "10px 16px",
-      borderRadius: "6px",
-      border: "1px solid #446688",
-      background: "#002b5c",
-      color: "#ddeeff",
+      borderRadius: "2px",
+      border: "1px solid #334466",
+      background: "#0a1525",
+      color: "#ccddee",
       outline: "none",
       width: "240px",
       textAlign: "center",
+      letterSpacing: "2px",
     } as CSSStyleDeclaration);
     document.body.appendChild(input);
     input.focus();
     this.inputEl = input;
 
-    // Route selection UI
-    this.createRouteButtons(width / 2, height * 0.58);
+    /* ── route selection ── */
+    this.createRouteButtons(width / 2, height * 0.55);
 
+    /* ── play button ── */
     const playBtn = this.add
-      .text(width / 2, height * 0.72, "[ Play ]", {
-        fontFamily: "system-ui",
-        fontSize: "32px",
+      .text(width / 2, height * 0.72, "─  P L A Y  ─", {
+        fontFamily: SERIF,
+        fontSize: "28px",
         color: "#44ff88",
+        letterSpacing: 8,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
+      .on("pointerover", () => playBtn.setColor("#88ffbb"))
+      .on("pointerout", () => playBtn.setColor("#44ff88"))
       .on("pointerdown", () => this.tryStart());
+
+    if (playBtn.postFX) {
+      playBtn.postFX.addGlow(0x22aa55, 4, 0, false, 0.1, 8);
+    }
 
     this.input.keyboard?.on("keydown-ENTER", () => this.tryStart());
 
@@ -79,7 +109,7 @@ export class HomeScreen extends Phaser.Scene {
   }
 
   private createRouteButtons(centerX: number, y: number) {
-    const spacing = 140;
+    const spacing = 160;
     const routes: { id: SharkRoute; label: string; color: string }[] = [
       { id: "attack", label: "攻撃系\n(シュモクザメ)", color: "#ff6666" },
       { id: "non-attack", label: "非攻撃系\n(ドチザメ)", color: "#66ccff" },
@@ -91,13 +121,13 @@ export class HomeScreen extends Phaser.Scene {
     routes.forEach((route, index) => {
       const x = centerX + (index - 1) * spacing;
       const btn = this.add.text(x, y, route.label, {
-        fontFamily: "system-ui, sans-serif",
-        fontSize: "16px",
-        fontStyle: "bold",
+        fontFamily: SERIF,
+        fontSize: "15px",
         color: "#ffffff",
-        backgroundColor: "#113355",
-        padding: { x: 10, y: 8 },
+        backgroundColor: "#0a1a2a",
+        padding: { x: 12, y: 10 },
         align: "center",
+        letterSpacing: 2,
       })
       .setResolution(window.devicePixelRatio || 1)
       .setOrigin(0.5)
@@ -116,11 +146,11 @@ export class HomeScreen extends Phaser.Scene {
     buttons.forEach((btn, index) => {
       const isSelected = this.selectedRoute === routes[index].id;
       btn.setStyle({
-        backgroundColor: isSelected ? "#335577" : "#113355",
-        color: isSelected ? routes[index].color : "#aaaaaa",
+        backgroundColor: isSelected ? "#152535" : "#0a1a2a",
+        color: isSelected ? routes[index].color : "#667788",
       });
       if (isSelected) {
-        btn.setStroke(routes[index].color, 2);
+        btn.setStroke(routes[index].color, 1);
       } else {
         btn.setStroke("#000000", 0);
       }
