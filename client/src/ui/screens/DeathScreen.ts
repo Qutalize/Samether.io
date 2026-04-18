@@ -19,7 +19,7 @@ export class DeathScreen extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.audio("deathse", "deathse.mp3");
+    this.load.audio("sfx_death", "sfx_death.mp3");
   }
 
   init(data: { score: number; stage: number; route?: SharkRoute }): void {
@@ -36,9 +36,9 @@ export class DeathScreen extends Phaser.Scene {
     }
 
     /* Schedule death sound effect */
-    if (this.sound && this.cache.audio.exists("deathse")) {
+    if (this.sound && this.cache.audio.exists("sfx_death")) {
       this.time.delayedCall(600, () => {
-        this.deathSound = this.sound.add("deathse", { loop: false, volume: 1.0 });
+        this.deathSound = this.sound.add("sfx_death", { loop: false, volume: 1.0 });
         if (this.deathSound) {
           this.deathSound.play();
         }
