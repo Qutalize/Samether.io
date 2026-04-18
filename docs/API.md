@@ -70,7 +70,7 @@ Client                           Server
   |<------ state (20/sec) ---------|
   |<------ state (20/sec) ---------|
   |                                 |
-  |---- touch_input/gps/dash ----->|
+  |----------- input ------------->|
   |<------ state update -----------|
 ```
 
@@ -102,26 +102,30 @@ Player joins the game.
 
 ---
 
-### touch_input
+### input
 
-Player input from touch/joystick control.
+Player movement/input update from touch/joystick controls.
 
 **Format**:
 ```json
 {
-  "type": "touch_input",
-  "direction": {
-    "x": 0.707,
-    "y": 0.707
-  },
-  "dash": false
+  "type": "input",
+  "payload": {
+    "angle": 0.785,
+    "dash": false,
+    "draw": false
+  }
 }
 ```
 
 **Fields**:
-- `direction.x` (number): X component (-1.0 to 1.0)
-- `direction.y` (number): Y component (-1.0 to 1.0)
-- `dash` (boolean): Dash activation flag
+- `payload.angle` (number): Movement angle in radians
+- `payload.dash` (boolean): Dash activation flag
+- `payload.draw` (boolean): Draw/hold input flag
+
+**Notes**:
+- This replaces older `touch_input`-style messages
+- Send `type: "input"` with all input fields inside `payload`
 
 **Rate Limit**: ~30-60 messages/second recommended (throttled client-side)
 
