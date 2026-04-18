@@ -13,6 +13,7 @@ type Config struct {
 	RedisPassword string
 	RedisDB       int
 	RedisPrefix   string
+	AllowedOrigin string
 }
 
 func Load() Config {
@@ -29,6 +30,7 @@ func Load() Config {
 
 	cfg.RoomID = getenvDefault("ROOM_ID", defaultRoomID())
 	cfg.InstanceID = getenvDefault("INSTANCE_ID", cfg.RoomID)
+	cfg.AllowedOrigin = os.Getenv("ALLOWED_ORIGIN")
 	cfg.RedisAddr = os.Getenv("REDIS_ADDR")
 	cfg.RedisPassword = os.Getenv("REDIS_PASSWORD")
 	cfg.RedisPrefix = os.Getenv("REDIS_PREFIX")
