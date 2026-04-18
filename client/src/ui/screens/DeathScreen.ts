@@ -91,7 +91,7 @@ export class DeathScreen extends Phaser.Scene {
       ease: "Power1",
     });
 
-    this.returnBtn = this.add.text(0, 0, "ホームへ戻る", {
+    this.returnBtn = this.add.text(0, 0, "─  ホームへ戻る  ─", {
       fontFamily: "'Times New Roman', 'Georgia', serif",
       fontSize: "20px",
       color: "#665544",
@@ -100,9 +100,19 @@ export class DeathScreen extends Phaser.Scene {
       .setOrigin(0.5)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => this.returnBtn.setColor("#ccaa88"))
-      .on("pointerout", () => this.returnBtn.setColor("#665544"))
+      .on("pointerover", () => {
+        this.returnBtn.setColor("#ccaa88");
+        if (this.returnBtn.postFX) { this.returnBtn.postFX.clear(); this.returnBtn.postFX.addGlow(0x665544, 6, 0, false, 0.1, 12); }
+      })
+      .on("pointerout", () => {
+        this.returnBtn.setColor("#665544");
+        if (this.returnBtn.postFX) { this.returnBtn.postFX.clear(); this.returnBtn.postFX.addGlow(0x665544, 3, 0, false, 0.1, 8); }
+      })
       .on("pointerdown", () => this.scene.start("HomeScreen"));
+
+    if (this.returnBtn.postFX) {
+      this.returnBtn.postFX.addGlow(0x665544, 3, 0, false, 0.1, 8);
+    }
 
     this.tweens.add({
       targets: this.returnBtn,

@@ -48,7 +48,7 @@ export class CPScreen extends Phaser.Scene {
     this.instructionText = this.add.text(
       0,
       0,
-      `スタート地点で [ スタート ]、目的地で [ ゴール ] を押してください\n移動距離 ${METERS_PER_CP} m につき 1 CP (1 回最大 ${MAX_EARN_PER_SESSION} CP)`,
+      `スタート地点で「スタート」、目的地で「ゴール」を押してください\n移動距離 ${METERS_PER_CP} m につき 1 CP (1 回最大 ${MAX_EARN_PER_SESSION} CP)`,
       {
         fontFamily: SERIF,
         fontSize: "15px",
@@ -64,33 +64,14 @@ export class CPScreen extends Phaser.Scene {
       color: "#4a6a8a",
     }).setOrigin(0.5);
 
-    this.startBtn = this.add.text(0, 0, "─  スタート  ─", {
-      fontFamily: SERIF,
-      fontSize: "28px",
-      color: "#44ff88",
-      letterSpacing: 8,
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.handleStart());
+    this.startBtn = this.styledButton("─  スタート  ─", "28px", "#44ff88", "#88ffbb", 0x22aa55, 8);
+    this.startBtn.on("pointerdown", () => this.handleStart());
 
-    this.goalBtn = this.add.text(0, 0, "[ ゴール ]", {
-      fontFamily: SERIF,
-      fontSize: "22px",
-      color: "#555555",
-      letterSpacing: 4,
-    })
-      .setOrigin(0.5)
-      .on("pointerdown", () => this.handleGoal());
+    this.goalBtn = this.styledButton("─  ゴール  ─", "22px", "#555555", "#88aacc", 0x446688, 4);
+    this.goalBtn.on("pointerdown", () => this.handleGoal());
 
-    this.backBtn = this.add.text(0, 0, "[ ホームへ戻る ]", {
-      fontFamily: SERIF,
-      fontSize: "18px",
-      color: "#6688aa",
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.scene.start("HomeScreen"));
+    this.backBtn = this.styledButton("─  ホームへ戻る  ─", "18px", "#6688aa", "#88bbdd", 0x446688, 4);
+    this.backBtn.on("pointerdown", () => this.scene.start("HomeScreen"));
 
     this.layout(this.scale.width, this.scale.height);
 
@@ -104,6 +85,32 @@ export class CPScreen extends Phaser.Scene {
     });
 
     this.applyPhase();
+  }
+
+  private styledButton(
+    label: string, fontSize: string, color: string, hoverColor: string, glowColor: number, letterSpacing: number,
+  ): Phaser.GameObjects.Text {
+    const btn = this.add.text(0, 0, label, {
+      fontFamily: SERIF,
+      fontSize,
+      color,
+      letterSpacing,
+    })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerover", () => {
+        btn.setColor(hoverColor);
+        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 6, 0, false, 0.1, 12); }
+      })
+      .on("pointerout", () => {
+        btn.setColor(color);
+        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8); }
+      });
+
+    if (btn.postFX) {
+      btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8);
+    }
+    return btn;
   }
 
   private layout(width: number, height: number): void {
@@ -141,7 +148,7 @@ export class CPScreen extends Phaser.Scene {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         this.startCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-        this.setStatus("計測中... 目的地へ移動して [ ゴール ] を押してください", "#44ff88");
+        this.setStatus("計測中... 目的地へ移動して「ゴール」を押してください", "#44ff88");
       },
       (err) => {
         this.phase = "idle";
