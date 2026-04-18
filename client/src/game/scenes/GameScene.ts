@@ -96,6 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image("shark_megalodon", "shark_megalodon.png");
     this.load.image("shark_whale",     "shark_whale.png");
     this.load.image("shark_greenland", "shark_greenland.png");
+    this.load.audio("bgm", "bgm.mp3");
     if (!this.cache.shader.has("OceanBackground")) {
       this.cache.shader.add("OceanBackground", OceanBackgroundShader);
     }
