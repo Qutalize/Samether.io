@@ -14,7 +14,6 @@ RedisAddr     string
 RedisPassword string
 RedisDB       int
 RedisPrefix   string
-AllowedOrigin string
 }
 
 func Load() Config {
@@ -34,7 +33,6 @@ log.Printf("Warning: Invalid ROOM_CAPACITY value: %s, using default: %d", raw, c
 
 cfg.RoomID = getenvDefault("ROOM_ID", defaultRoomID())
 cfg.InstanceID = getenvDefault("INSTANCE_ID", cfg.RoomID)
-cfg.AllowedOrigin = os.Getenv("ALLOWED_ORIGIN")
 
 // Redis configuration with validation
 cfg.RedisAddr = os.Getenv("REDIS_ADDR")
