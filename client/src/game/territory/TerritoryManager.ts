@@ -10,31 +10,39 @@ import { TerritoryRenderer } from './TerritoryRenderer';
 
 export interface TerritoryCreatedMessage {
   type: 'territory_created';
-  territory: {
-    id: string;
-    sharkId: string;
-    level: number;
-    polygon: Point[];
-    expiresAt: number;
+  payload: {
+    territory: {
+      id: string;
+      sharkId: string;
+      level: number;
+      polygon: Point[];
+      expiresAt: number;
+    };
   };
 }
 
 export interface TerritoryUpdatedMessage {
   type: 'territory_updated';
-  territoryId: string;
-  newLevel: number;
-  timestamp: number;
+  payload: {
+    territoryId: string;
+    newLevel: number;
+    timestamp: number;
+  };
 }
 
 export interface TerritoryExpiredMessage {
   type: 'territory_expired';
-  territoryIds: string[];
+  payload: {
+    territoryIds: string[];
+  };
 }
 
 export interface MyEvolutionMessage {
   type: 'my_evolution';
-  newLevel: number;
-  recalculateTerritories: boolean;
+  payload: {
+    newLevel: number;
+    recalculateTerritories: boolean;
+  };
 }
 
 export class TerritoryManager {
