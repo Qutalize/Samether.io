@@ -458,7 +458,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onDeath(m: DeathPayload): void {
-    this.scene.start("DeathScreen", { score: m.score, stage: m.stage });
+    this.scene.start("DeathScreen", { score: m.score, stage: m.stage, route: this.myRoute });
   }
 
   private onLeaderboard(m: LeaderboardPayload): void {
