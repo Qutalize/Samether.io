@@ -364,7 +364,7 @@ func (s *CPStore) ConsumeCP(playerID string, amount int) (int, error)
 
 | パラメータ | 値 |
 |---|---|
-| 蓄積レート | 1m = 1 CP |
+| 蓄積レート | 50m = 1 CP |
 | 1セッション上限 | 500 CP |
 | セッション最大時間 | 60分 |
 | 位置送信間隔 | 5秒 |

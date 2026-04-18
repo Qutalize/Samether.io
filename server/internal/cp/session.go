@@ -12,7 +12,7 @@ const (
 	AccuracyThreshold  = 50.0 // meters
 	MinSessionDistance  = 10.0 // meters; sessions under this yield 0 CP
 	SessionCooldown    = 5 * time.Minute
-	MetersPerCP        = 1.0
+	MetersPerCP        = 50.0
 )
 
 // CPSession represents an active CP measurement session.
