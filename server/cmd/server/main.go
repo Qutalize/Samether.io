@@ -1,6 +1,7 @@
 package main
 
 import (
+"encoding/json"
 "flag"
 "log"
 "net/http"
@@ -46,7 +47,15 @@ return
 }
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusOK)
-_, _ = w.Write([]byte(`{"status":"ok","roomId":"` + cfg.RoomID + `","instanceId":"` + cfg.InstanceID + `"}`))
+_ = json.NewEncoder(w).Encode(struct {
+Status     string `json:"status"`
+RoomID     string `json:"roomId"`
+InstanceID string `json:"instanceId"`
+}{
+Status:     "ok",
+RoomID:     cfg.RoomID,
+InstanceID: cfg.InstanceID,
+})
 })
 
 // Room info endpoint
