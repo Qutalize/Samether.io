@@ -179,3 +179,50 @@ func EncodeDeath(d DeathPayload) []byte {
 func EncodeLeaderboard(l LeaderboardPayload) []byte {
 	return MustMarshal("leaderboard", l)
 }
+
+// ============================================================
+// --- Territory System Messages ---
+// ============================================================
+
+type TerritoryPayload struct {
+	ID        string  `json:"id"`
+	SharkID   string  `json:"sharkId"`
+	Level     int     `json:"level"`
+	Polygon   []Point `json:"polygon"`
+	ExpiresAt int64   `json:"expiresAt"`
+}
+
+type TerritoryCreatedPayload struct {
+	Territory TerritoryPayload `json:"territory"`
+}
+
+type TerritoryUpdatedPayload struct {
+	TerritoryID string `json:"territoryId"`
+	NewLevel    int    `json:"newLevel"`
+	Timestamp   int64  `json:"timestamp"`
+}
+
+type TerritoryExpiredPayload struct {
+	TerritoryIDs []string `json:"territoryIds"`
+}
+
+type MyEvolutionPayload struct {
+	NewLevel               int  `json:"newLevel"`
+	RecalculateTerritories bool `json:"recalculateTerritories"`
+}
+
+func EncodeTerritoryCreated(t TerritoryCreatedPayload) []byte {
+	return MustMarshal("territory_created", t)
+}
+
+func EncodeTerritoryUpdated(t TerritoryUpdatedPayload) []byte {
+	return MustMarshal("territory_updated", t)
+}
+
+func EncodeTerritoryExpired(t TerritoryExpiredPayload) []byte {
+	return MustMarshal("territory_expired", t)
+}
+
+func EncodeMyEvolution(e MyEvolutionPayload) []byte {
+	return MustMarshal("my_evolution", e)
+}
