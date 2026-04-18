@@ -17,4 +17,8 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [LoginScreen, HomeScreen, CPScreen, GameScene, DeathScreen],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+game.events.once(Phaser.Core.Events.READY, () => {
+  setTimeout(() => game.scale.refresh(), 100);
+});
