@@ -178,6 +178,8 @@ export class TerritoryManager {
     // Recalculate is automatically handled by TerritoryCache
   }
 
+  private lastDangerTerritoryId: string | null = null;
+
   /**
    * Check if current position is in a dangerous territory
    */
@@ -185,7 +187,12 @@ export class TerritoryManager {
     const dangerTerritory = this.cache.isPointInDanger(x, y);
 
     if (dangerTerritory) {
-      this.renderer.showDangerAlert(dangerTerritory);
+      if (this.lastDangerTerritoryId !== dangerTerritory.id) {
+        this.renderer.showDangerAlert(dangerTerritory);
+        this.lastDangerTerritoryId = dangerTerritory.id;
+      }
+    } else {
+      this.lastDangerTerritoryId = null;
     }
 
     return dangerTerritory;
@@ -287,6 +294,7 @@ export class TerritoryManager {
    * Clean up resources
    */
   destroy(): void {
+    this.lastDangerTerritoryId = null;
     this.renderer.destroy();
     this.cache.clear();
   }
