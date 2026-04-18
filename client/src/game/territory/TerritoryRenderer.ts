@@ -13,6 +13,7 @@ export class TerritoryRenderer {
   private cache: TerritoryCache;
   private graphics: Phaser.GameObjects.Graphics;
   private warningIcons: Map<string, Phaser.GameObjects.Text> = new Map();
+  private dangerousWarningIds: Set<string> = new Set();
 
   // Visual settings
   private colors = {
@@ -49,17 +50,48 @@ export class TerritoryRenderer {
   update(): void {
     // Clear previous frame
     this.graphics.clear();
-    this.clearWarningIcons();
 
     // Remove expired territories
     this.cache.removeExpired();
 
+    const dangerousTerritories = this.cache.getDangerousTerritories();
+    this.syncWarningIcons(dangerousTerritories);
+
     // Draw territories by priority: own (green) first, then dangerous (orange)
     this.renderTerritories(this.cache.getMyTerritories(), 'green');
-    this.renderTerritories(this.cache.getDangerousTerritories(), 'orange');
+    this.renderTerritories(dangerousTerritories, 'orange');
 
     // Optionally draw neutral territories (same level)
     // this.renderTerritories(this.cache.getByColor('gray'), 'gray');
+  }
+
+  /**
+   * Keep warning icons in sync with the current dangerous territory set.
+   * Creates icons only for newly dangerous territories and destroys only
+   * those that are no longer dangerous.
+   */
+  private syncWarningIcons(territories: Territory[]): void {
+    const nextIds = new Set<string>();
+
+    for (const territory of territories) {
+      nextIds.add(territory.id);
+
+      if (!this.warningIcons.has(territory.id)) {
+        this.drawWarningIcon(territory);
+      }
+    }
+
+    for (const territoryId of this.dangerousWarningIds) {
+      if (!nextIds.has(territoryId)) {
+        const icon = this.warningIcons.get(territoryId);
+        if (icon) {
+          icon.destroy();
+          this.warningIcons.delete(territoryId);
+        }
+      }
+    }
+
+    this.dangerousWarningIds = nextIds;
   }
 
   /**
@@ -73,11 +105,6 @@ export class TerritoryRenderer {
 
     for (const territory of territories) {
       this.drawPolygon(territory.polygon);
-
-      // Add warning icon for dangerous territories
-      if (color === 'orange') {
-        this.drawWarningIcon(territory);
-      }
     }
   }
 
