@@ -21,17 +21,20 @@ func NormalizeRoute(r string) string {
 }
 
 type Shark struct {
-	ID            string
-	Name          string
-	Route         string
-	Head          Vec
-	Angle         float64 // radians
-	TargetAngle   float64 // target turning angle
-	Segments      []Vec   // including head at index 0
-	XP            int
-	Stage         int     // zero-based index into Stages
-	DashUntilTick int64
-	Alive         bool
+	ID                 string
+	Name               string
+	Route              string
+	Head               Vec
+	Angle              float64 // radians
+	TargetAngle        float64 // target turning angle
+	Segments           []Vec   // including head at index 0
+	Trail              []Vec   // head trajectory for territory formation
+	TrailActive        bool    // whether current input hold is creating trail points
+	Territories        [][]Vec // closed polygons formed when trail self-intersects
+	XP                 int
+	Stage              int // zero-based index into Stages
+	DashUntilTick      int64
+	Alive              bool
 	IsBot              bool
 	TargetFoodID       string
 	AbandonedFoodID    string
@@ -49,6 +52,7 @@ func NewShark(id, name string, spawn Vec) *Shark {
 		XP:          0,
 		Stage:       0,
 		Alive:       true,
+		Trail:       []Vec{spawn},
 	}
 	s.Segments = make([]Vec, Stages[0].SegmentCount)
 	for i := range s.Segments {
@@ -103,6 +107,7 @@ func (s *Shark) Move(dt float64, dash bool) {
 	dy := math.Sin(s.Angle) * speed * dt
 
 	newHead := Vec{X: s.Head.X + dx, Y: s.Head.Y + dy}
+	oldHead := s.Head
 	s.Head = newHead
 	s.Segments[0] = newHead
 
@@ -120,6 +125,10 @@ func (s *Shark) Move(dt float64, dash bool) {
 			X: cur.X + (prev.X-cur.X)*t,
 			Y: cur.Y + (prev.Y-cur.Y)*t,
 		}
+	}
+
+	if s.TrailActive {
+		s.recordTrailPoint(oldHead, newHead)
 	}
 }
 

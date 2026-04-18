@@ -99,3 +99,24 @@ func TestSharkGrowthKeepsExistingSegments(t *testing.T) {
 		t.Fatalf("segment 0 != head")
 	}
 }
+
+func TestSharkTrailRecordsOnlyWhenActive(t *testing.T) {
+	s := NewShark("p1", "alice", Vec{X: 0, Y: 0})
+	s.Angle = 0
+	s.TrailActive = false
+
+	for i := 0; i < 50; i++ {
+		s.Move(1.0/float64(TickHz), false)
+	}
+	if len(s.Trail) != 1 {
+		t.Fatalf("expected trail to stay length 1 when inactive, got %d", len(s.Trail))
+	}
+
+	s.TrailActive = true
+	for i := 0; i < 50; i++ {
+		s.Move(1.0/float64(TickHz), false)
+	}
+	if len(s.Trail) <= 1 {
+		t.Fatalf("expected trail to record while active, got %d", len(s.Trail))
+	}
+}
