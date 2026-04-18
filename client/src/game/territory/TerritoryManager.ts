@@ -8,6 +8,7 @@
 import Phaser from 'phaser';
 import { TerritoryCache, Territory, Point } from './TerritoryCache';
 import { TerritoryRenderer } from './TerritoryRenderer';
+import type { SharkRoute } from '../../network/protocol';
 
 export interface TerritoryCreatedMessage {
   type: 'territory_created';
@@ -51,12 +52,14 @@ export class TerritoryManager {
   private renderer: TerritoryRenderer;
   private mySharkId: string | null = null;
   private myLevel: number = 1;
+  private myRoute: SharkRoute;
   private scene: Phaser.Scene;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, myRoute: SharkRoute) {
     this.scene = scene;
+    this.myRoute = myRoute;
     this.cache = new TerritoryCache();
-    this.renderer = new TerritoryRenderer(scene, this.cache);
+    this.renderer = new TerritoryRenderer(scene, this.cache, myRoute);
   }
 
   /**

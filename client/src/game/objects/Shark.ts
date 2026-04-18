@@ -1,17 +1,12 @@
 import Phaser from "phaser";
 import { SharkRoute } from "../../network/protocol";
 import { TerritoryRenderer } from "./TerritoryRenderer";
+import { getRouteColor } from "../config/RouteColors";
 
 /* ── colours tuned to look like semi-transparent grey
       silhouettes against the dark ocean ──────────────────── */
 const BODY_COLORS = [0x708898, 0x668090, 0x5c7488, 0x526880, 0x485c78];
 const SIZE_SCALES = [1.3, 1.45, 1.6, 1.8, 2.05];
-
-const ROUTE_GLOW_COLORS: Record<SharkRoute, number> = {
-  "attack": 0xff6666,     // UIと同じ赤
-  "non-attack": 0x66ccff, // UIと同じ青
-  "deep-sea": 0xbb66ff    // UIと同じ紫
-};
 
 function resolveSharkTextureKey(stage: number, route: SharkRoute): string {
   if (stage <= 1) return "shark_stage01";
@@ -99,7 +94,7 @@ export class Shark extends Phaser.GameObjects.Container {
       rope.postFX.clear();
       // Increase padding to ensure the outer glow doesn't get clipped by the bounds
       rope.postFX.setPadding(32);
-      const glowColor = ROUTE_GLOW_COLORS[this.route];
+      const glowColor = getRouteColor(this.route);
       // addGlow(color, outerStrength, innerStrength, knockout, threshold, distance)
       rope.postFX.addGlow(glowColor, 4, 0, false, 0.1, 10);
     }
