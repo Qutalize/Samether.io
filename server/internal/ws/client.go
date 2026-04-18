@@ -50,7 +50,7 @@ func (c *Client) readPump() {
 			return
 		}
 
-		// 新プロトコルで type を取得
+		// 新プロトコルで type 取得
 		typ, _, err := DecodeMessage(raw)
 		if err != nil {
 			continue

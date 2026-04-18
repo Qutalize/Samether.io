@@ -10,7 +10,8 @@ import (
 type Territory struct {
 	ID        string    `json:"id"`
 	SharkID   string    `json:"sharkId"`
-	Level     int       `json:"level"` // Shark evolution level (1-5)
+	Route     string    `json:"route"`    // Shark route type: "attack", "non-attack", "deep-sea"
+	Level     int       `json:"level"`    // Shark evolution level (1-5)
 	Polygon   []Vec     `json:"polygon"`
 	BBox      BBox      `json:"bbox"`
 	CreatedAt int64     `json:"createdAt"` // Unix timestamp in milliseconds for WS/JSON payloads
@@ -43,7 +44,7 @@ func NewTerritoryManager(lifetime time.Duration) *TerritoryManager {
 }
 
 // CreateTerritory creates a new territory from a polygon
-func (tm *TerritoryManager) CreateTerritory(sharkID string, level int, polygon []Vec) *Territory {
+func (tm *TerritoryManager) CreateTerritory(sharkID string, route string, level int, polygon []Vec) *Territory {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -51,6 +52,7 @@ func (tm *TerritoryManager) CreateTerritory(sharkID string, level int, polygon [
 	territory := &Territory{
 		ID:        fmt.Sprintf("%s_territory_%d", sharkID, now.UnixNano()),
 		SharkID:   sharkID,
+		Route:     route,
 		Level:     level,
 		Polygon:   polygon,
 		BBox:      calculateBBox(polygon),

@@ -155,6 +155,12 @@ func DecodeMessage(data []byte) (string, any, error) {
 			return "", nil, err
 		}
 		return base.Type, p, nil
+	case "cp_update":
+		var p CPUpdatePayload
+		if err := json.Unmarshal(base.Payload, &p); err != nil {
+			return "", nil, err
+		}
+		return base.Type, p, nil
 	default:
 		return base.Type, base.Payload, nil
 	}
@@ -181,12 +187,23 @@ func EncodeLeaderboard(l LeaderboardPayload) []byte {
 }
 
 // ============================================================
+// --- CP (Charge Point) Client → Server Payload ---
+// ============================================================
+
+type CPUpdatePayload struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+	Acc float64 `json:"acc"`
+}
+
+// ============================================================
 // --- Territory System Messages ---
 // ============================================================
 
 type TerritoryPayload struct {
 	ID        string  `json:"id"`
 	SharkID   string  `json:"sharkId"`
+	Route     string  `json:"route"`
 	Level     int     `json:"level"`
 	Polygon   []Point `json:"polygon"`
 	ExpiresAt int64   `json:"expiresAt"`
