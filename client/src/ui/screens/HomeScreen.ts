@@ -15,6 +15,7 @@ export class HomeScreen extends Phaser.Scene {
   private cpText!: Phaser.GameObjects.Text;
   private playBtn!: Phaser.GameObjects.Text;
   private cpBtn!: Phaser.GameObjects.Text;
+  private guideBtn!: Phaser.GameObjects.Text;
   private logoutBtn!: Phaser.GameObjects.Text;
   private routeButtons: Phaser.GameObjects.Text[] = [];
   private resizeHandler!: (size: Phaser.Structs.Size) => void;
@@ -42,8 +43,8 @@ export class HomeScreen extends Phaser.Scene {
 
     this.subtitleText = this.add.text(0, 0, `ようこそ、${this.playerName}`, {
       fontFamily: SERIF,
-      fontSize: "16px",
-      color: "#4a6a8a",
+      fontSize: "24px",
+      color: "#88aacc",
       letterSpacing: 6,
     }).setOrigin(0.5);
 
@@ -57,40 +58,22 @@ export class HomeScreen extends Phaser.Scene {
       color: "#6688aa",
     }).setOrigin(0.5);
 
-    this.playBtn = this.add.text(0, 0, "─  P L A Y  ─", {
-      fontFamily: SERIF,
-      fontSize: "28px",
-      color: "#44ff88",
-      letterSpacing: 8,
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => this.playBtn.setColor("#88ffbb"))
-      .on("pointerout", () => this.playBtn.setColor("#44ff88"))
-      .on("pointerdown", () => this.tryStart());
+    this.playBtn = this.styledButton("─  P L A Y  ─", "28px", "#44ff88", "#88ffbb", 0x22aa55, 8);
+    this.playBtn.on("pointerdown", () => this.tryStart());
 
     this.input.keyboard?.on("keydown-ENTER", () => this.tryStart());
 
-    this.cpBtn = this.add.text(0, 0, "[ CP 獲得 ]", {
-      fontFamily: SERIF,
-      fontSize: "22px",
-      color: "#ffaa44",
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.scene.start("CPScreen"));
+    this.cpBtn = this.styledButton("─  C P 獲 得  ─", "22px", "#ffaa44", "#ffcc88", 0xaa7722, 6);
+    this.cpBtn.on("pointerdown", () => this.scene.start("CPScreen"));
 
-    this.logoutBtn = this.add.text(0, 0, "[ ログアウト ]", {
-      fontFamily: SERIF,
-      fontSize: "18px",
-      color: "#ff6666",
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => {
-        logout();
-        this.scene.start("LoginScreen");
-      });
+    this.guideBtn = this.styledButton("─  ガイド  ─", "20px", "#6688aa", "#88bbdd", 0x446688, 6);
+    this.guideBtn.on("pointerdown", () => this.scene.start("GuideScreen"));
+
+    this.logoutBtn = this.styledButton("─  ログアウト  ─", "18px", "#884444", "#ff6666", 0x882222, 4);
+    this.logoutBtn.on("pointerdown", () => {
+      logout();
+      this.scene.start("LoginScreen");
+    });
 
     this.layout(this.scale.width, this.scale.height);
 
@@ -119,10 +102,11 @@ export class HomeScreen extends Phaser.Scene {
     this.lineGfx.strokePath();
 
     this.layoutRouteButtons(width / 2, height * 0.48);
-    this.cpText.setPosition(width / 2, height * 0.62).setText(`所持 CP: ${loadCp()}`);
-    this.playBtn.setPosition(width / 2, height * 0.70);
-    this.cpBtn.setPosition(width / 2, height * 0.80);
-    this.logoutBtn.setPosition(width / 2, height * 0.88);
+    this.cpText.setPosition(width / 2, height * 0.58).setText(`所持 CP: ${loadCp()}`);
+    this.playBtn.setPosition(width / 2, height * 0.65);
+    this.cpBtn.setPosition(width / 2, height * 0.73);
+    this.guideBtn.setPosition(width / 2, height * 0.81);
+    this.logoutBtn.setPosition(width / 2, height * 0.89);
   }
 
   private createRouteButtons(): void {
@@ -174,6 +158,32 @@ export class HomeScreen extends Phaser.Scene {
         btn.setStroke("#000000", 0);
       }
     });
+  }
+
+  private styledButton(
+    label: string, fontSize: string, color: string, hoverColor: string, glowColor: number, letterSpacing: number,
+  ): Phaser.GameObjects.Text {
+    const btn = this.add.text(0, 0, label, {
+      fontFamily: SERIF,
+      fontSize,
+      color,
+      letterSpacing,
+    })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerover", () => {
+        btn.setColor(hoverColor);
+        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 6, 0, false, 0.1, 12); }
+      })
+      .on("pointerout", () => {
+        btn.setColor(color);
+        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8); }
+      });
+
+    if (btn.postFX) {
+      btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8);
+    }
+    return btn;
   }
 
   private async tryStart(): Promise<void> {
