@@ -21,3 +21,8 @@ server/internal/static/assets/*
 # AWS state file from deploy.sh
 infra/.deploy-state
 *.pem
+
+# Environment files
+.env
+.env.local
+docker-compose.override.yml

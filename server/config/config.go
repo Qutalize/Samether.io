@@ -1,60 +1,72 @@
 package config
 
 import (
-	"os"
-	"strconv"
+"log"
+"os"
+"strconv"
 )
 
 type Config struct {
-	RoomID        string
-	RoomCapacity  int
-	InstanceID    string
-	RedisAddr     string
-	RedisPassword string
-	RedisDB       int
-	RedisPrefix   string
-	AllowedOrigin string
+RoomID        string
+RoomCapacity  int
+InstanceID    string
+RedisAddr     string
+RedisPassword string
+RedisDB       int
+RedisPrefix   string
 }
 
 func Load() Config {
-	cfg := Config{
-		RoomCapacity: 50,
-		RedisDB:      0,
-	}
+cfg := Config{
+RoomCapacity: 50,
+RedisDB:      0,
+}
 
-	if raw := os.Getenv("ROOM_CAPACITY"); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
-			cfg.RoomCapacity = parsed
-		}
-	}
+// Room configuration
+if raw := os.Getenv("ROOM_CAPACITY"); raw != "" {
+if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+cfg.RoomCapacity = parsed
+} else {
+log.Printf("Warning: Invalid ROOM_CAPACITY value: %s, using default: %d", raw, cfg.RoomCapacity)
+}
+}
 
-	cfg.RoomID = getenvDefault("ROOM_ID", defaultRoomID())
-	cfg.InstanceID = getenvDefault("INSTANCE_ID", cfg.RoomID)
-	cfg.AllowedOrigin = os.Getenv("ALLOWED_ORIGIN")
-	cfg.RedisAddr = os.Getenv("REDIS_ADDR")
-	cfg.RedisPassword = os.Getenv("REDIS_PASSWORD")
-	cfg.RedisPrefix = os.Getenv("REDIS_PREFIX")
+cfg.RoomID = getenvDefault("ROOM_ID", defaultRoomID())
+cfg.InstanceID = getenvDefault("INSTANCE_ID", cfg.RoomID)
 
-	if raw := os.Getenv("REDIS_DB"); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil {
-			cfg.RedisDB = parsed
-		}
-	}
+// Redis configuration with validation
+cfg.RedisAddr = os.Getenv("REDIS_ADDR")
+if cfg.RedisAddr != "" {
+log.Printf("Redis enabled at: %s", cfg.RedisAddr)
+} else {
+log.Printf("Redis not configured, using in-memory leaderboard")
+}
 
-	return cfg
+cfg.RedisPassword = os.Getenv("REDIS_PASSWORD")
+cfg.RedisPrefix = getenvDefault("REDIS_PREFIX", "samezario:leaderboard")
+
+if raw := os.Getenv("REDIS_DB"); raw != "" {
+if parsed, err := strconv.Atoi(raw); err == nil && parsed >= 0 {
+cfg.RedisDB = parsed
+} else {
+log.Printf("Warning: Invalid REDIS_DB value: %s, using default: %d", raw, cfg.RedisDB)
+}
+}
+
+return cfg
 }
 
 func getenvDefault(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
+if v := os.Getenv(key); v != "" {
+return v
+}
+return fallback
 }
 
 func defaultRoomID() string {
-	hostname, err := os.Hostname()
-	if err == nil && hostname != "" {
-		return hostname
-	}
-	return "room-1"
+hostname, err := os.Hostname()
+if err == nil && hostname != "" {
+return hostname
+}
+return "room-1"
 }

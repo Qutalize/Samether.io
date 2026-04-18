@@ -1,6 +1,6 @@
 # Infrastructure
 
-Terraform for the Samether.io AWS baseline.
+Terraform configuration for Samezario AWS infrastructure.
 
 ## Target Architecture
 
@@ -32,13 +32,76 @@ infra/
   modules/location/      # Amazon Location tracker
 ```
 
-## Step By Step
+## Prerequisites
 
-1. Copy `envs/dev/terraform.tfvars.example` to `envs/dev/terraform.tfvars`.
-2. Fill in AWS account, region, domain, certificate, and image settings.
-3. Run `terraform init`.
-4. Run `terraform plan`.
-5. Run `terraform apply`.
+- AWS CLI configured with appropriate credentials
+- Terraform 1.0+ installed
+- Docker installed (for building and pushing images to ECR)
+
+## Quick Start
+
+### 1. Configure Variables
+
+Copy the example tfvars file:
+```bash
+cd envs/dev
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Edit `terraform.tfvars` with your settings:
+```hcl
+aws_region      = "us-east-1"
+aws_account_id  = "123456789012"
+project_name    = "samezario"
+environment     = "dev"
+# ... other variables
+```
+
+### 2. Initialize Terraform
+
+```bash
+cd envs/dev
+terraform init
+```
+
+### 3. Plan Infrastructure
+
+```bash
+terraform plan -out=tfplan
+```
+
+Review the planned changes carefully.
+
+### 4. Apply Infrastructure
+
+```bash
+terraform apply tfplan
+```
+
+### 5. Build and Push Docker Image
+
+After infrastructure is created:
+```bash
+# Get ECR login
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
+
+# Build and push from project root
+cd ../..
+docker build -t samezario:latest .
+docker tag samezario:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/samezario:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/samezario:latest
+```
+
+### 6. Update ECS Service
+
+Force new deployment to use the new image:
+```bash
+aws ecs update-service \
+  --cluster samezario-dev \
+  --service samezario-service \
+  --force-new-deployment \
+  --region us-east-1
+```
 
 ## Initial Deployment Order
 
