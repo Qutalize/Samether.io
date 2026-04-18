@@ -155,6 +155,12 @@ func DecodeMessage(data []byte) (string, any, error) {
 			return "", nil, err
 		}
 		return base.Type, p, nil
+	case "cp_update":
+		var p CPUpdatePayload
+		if err := json.Unmarshal(base.Payload, &p); err != nil {
+			return "", nil, err
+		}
+		return base.Type, p, nil
 	default:
 		return base.Type, base.Payload, nil
 	}
@@ -178,6 +184,16 @@ func EncodeDeath(d DeathPayload) []byte {
 
 func EncodeLeaderboard(l LeaderboardPayload) []byte {
 	return MustMarshal("leaderboard", l)
+}
+
+// ============================================================
+// --- CP (Charge Point) Client → Server Payload ---
+// ============================================================
+
+type CPUpdatePayload struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+	Acc float64 `json:"acc"`
 }
 
 // ============================================================

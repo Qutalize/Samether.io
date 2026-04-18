@@ -93,3 +93,16 @@ variable "location_tracker_name" {
   type        = string
   default     = "samether-dev-tracker"
 }
+
+variable "location_map_name" {
+  description = "Amazon Location map name."
+  type        = string
+  default     = "samether-dev-map"
+}
+
+variable "location_map_api_key" {
+  description = "Amazon Location Maps API key for client-side map rendering."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

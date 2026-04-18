@@ -308,19 +308,42 @@ func (t *TrackerClient) GetHistory(deviceID string, from, to time.Time) ([]Posit
 
 ```go
 // 位置履歴の隣接点間の Haversine 距離を累積
+// 静止フィルタ・速度フィルタ適用済み
 func CalcTotalDistance(positions []Position) float64 {
-    total := 0.0
-    for i := 1; i < len(positions); i++ {
-        total += haversine(
-            positions[i-1].Lat, positions[i-1].Lon,
+    n := len(positions)
+    if n < 2 {
+        return 0
+    }
+
+    // 隣接点間距離を事前計算
+    segments := make([]float64, n-1)
+    for i := 0; i < n-1; i++ {
+        segments[i] = haversine(
             positions[i].Lat, positions[i].Lon,
+            positions[i+1].Lat, positions[i+1].Lon,
         )
+    }
+
+    total := 0.0
+    for i, d := range segments {
+        // 速度フィルタ: 50km/h超 (69m/5秒) の区間を棄却
+        if d > maxSegmentM {
+            continue
+        }
+        // 静止フィルタ: 連続3点の2区間がいずれも2m未満なら静止とみなす
+        if i > 0 && segments[i-1] < stationaryThresholdM && d < stationaryThresholdM {
+            continue
+        }
+        total += d
     }
     return total
 }
 ```
 
 - Tracker の `AccuracyBased` フィルタリングにより、GPS ノイズによる距離膨張を抑制
+- **静止フィルタ**: 連続する3点間の2区間がいずれも **2m 未満** の場合、静止状態（GPSドリフト）とみなし距離を加算しない
+  - GPSドリフトによる偽の距離蓄積（静止時に最大 ~2,000m/時間）を抑制
+  - 閾値 2m は一般的なGPSドリフト量（1〜5m）に基づく
 - 追加の不正検知:
   - 隣接2点間の速度が **50 km/h 超** の場合、その区間を棄却（車両移動等の排除）
   - 5秒間隔で 50km/h = 約69m。69m 超の移動は棄却

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
@@ -19,13 +20,17 @@ func main() {
 	cfg := config.Load()
 
 	hub := sws.NewHub(sws.Config{
-		RoomID:        cfg.RoomID,
-		RoomCapacity:  cfg.RoomCapacity,
-		InstanceID:    cfg.InstanceID,
-		RedisAddr:     cfg.RedisAddr,
-		RedisPassword: cfg.RedisPassword,
-		RedisDB:       cfg.RedisDB,
-		RedisPrefix:   cfg.RedisPrefix,
+		RoomID:              cfg.RoomID,
+		RoomCapacity:        cfg.RoomCapacity,
+		InstanceID:          cfg.InstanceID,
+		RedisAddr:           cfg.RedisAddr,
+		RedisPassword:       cfg.RedisPassword,
+		RedisDB:             cfg.RedisDB,
+		RedisPrefix:         cfg.RedisPrefix,
+		LocationTrackerName: cfg.LocationTrackerName,
+		LocationMapName:     cfg.LocationMapName,
+		LocationMapAPIKey:   cfg.LocationMapAPIKey,
+		AWSRegion:           cfg.AWSRegion,
 	})
 	go hub.Run()
 
@@ -60,6 +65,21 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(sws.MustMarshal("room", hub.RoomSnapshot()))
+	})
+
+	// Map API key endpoint for client MapLibre GL JS
+	mux.HandleFunc("/api/map-key", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		resp, _ := json.Marshal(map[string]string{
+			"mapName": cfg.LocationMapName,
+			"region":  cfg.AWSRegion,
+			"apiKey":  cfg.LocationMapAPIKey,
+		})
+		_, _ = w.Write(resp)
 	})
 
 	// WebSocket endpoint
