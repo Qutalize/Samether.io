@@ -15,3 +15,4 @@ client/dist
 server/samezario-server
 server/internal/static/assets/*
 !server/internal/static/assets/.gitkeep
+!server/internal/static/assets/index.html

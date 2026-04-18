@@ -77,7 +77,7 @@ export interface LeaderboardPayload {
   topScore: number;
 }
 
-// Server → Client messages
+// Server → Client messages 
 export type WelcomeMsg = BaseMessage<"welcome", WelcomePayload>;
 export type StateMsg = BaseMessage<"state", StatePayload>;
 export type DeathMsg = BaseMessage<"death", DeathPayload>;
