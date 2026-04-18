@@ -260,6 +260,12 @@ func (h *Handler) CleanupExpired() []CPResultMsg {
 	return results
 }
 
+// HasSession returns true if the player has an active CP session.
+func (h *Handler) HasSession(playerID string) bool {
+	sess, ok := h.sessions[playerID]
+	return ok && sess.Active
+}
+
 // RemovePlayer cleans up when a player disconnects.
 func (h *Handler) RemovePlayer(playerID string) *CPResultMsg {
 	sess, ok := h.sessions[playerID]

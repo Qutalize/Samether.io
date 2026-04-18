@@ -4,6 +4,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -50,7 +51,6 @@ type Config struct {
 	RedisPrefix   string
 	// AWS Location Service
 	LocationTrackerName string
-	LocationMapName     string
 	LocationMapAPIKey   string
 	AWSRegion           string
 }
@@ -230,7 +230,7 @@ func (h *Hub) Run() {
 						h.sendToPlayer(result.PlayerID, result.MsgType, result.Payload)
 					}
 				}
-				if c.playerID != "" {
+				if c.playerID != "" && !c.cpOnly {
 					delete(h.world.Sharks, c.playerID)
 				}
 				delete(h.clients, c)
@@ -265,10 +265,30 @@ func (h *Hub) handleInbound(m inboundMsg) {
 	switch typ {
 
 	case "join":
+		p := payload.(JoinPayload)
+		isCPOnly := strings.HasPrefix(p.Name, "__cp__")
+
+		// playerIDが既にある場合の再join処理
 		if m.client.playerID != "" {
+			if isCPOnly && !m.client.cpOnly {
+				// ゲームクライアントがCPモードに切り替え: サメを削除してCPモードへ
+				delete(h.world.Sharks, m.client.playerID)
+				m.client.cpOnly = true
+			}
+			// CP専用 or 切り替え後: welcomeを返して再利用
+			if m.client.cpOnly {
+				h.send(m.client, "welcome", WelcomePayload{
+					PlayerID: m.client.playerID,
+					WorldW:   game.WorldWidth,
+					WorldH:   game.WorldHeight,
+					Room:     h.RoomSnapshot(),
+				})
+				return
+			}
 			return
 		}
-		if h.playerCount() >= h.roomCapacity {
+
+		if !isCPOnly && h.playerCount() >= h.roomCapacity {
 			h.send(m.client, "room_full", RoomFullPayload{
 				Room:   h.RoomSnapshot(),
 				Reason: "room capacity reached",
@@ -276,14 +296,15 @@ func (h *Hub) handleInbound(m inboundMsg) {
 			return
 		}
 
-		p := payload.(JoinPayload)
-
 		id := h.allocPlayerID()
 		m.client.playerID = id
+		m.client.cpOnly = isCPOnly
 
-		s := game.NewShark(id, p.Name, randomSpawn())
-		s.Route = game.NormalizeRoute(p.Route)
-		h.world.Sharks[id] = s
+		if !isCPOnly {
+			s := game.NewShark(id, p.Name, randomSpawn())
+			s.Route = game.NormalizeRoute(p.Route)
+			h.world.Sharks[id] = s
+		}
 
 		h.send(m.client, "welcome", WelcomePayload{
 			PlayerID: id,
@@ -292,12 +313,14 @@ func (h *Hub) handleInbound(m inboundMsg) {
 			Room:     h.RoomSnapshot(),
 		})
 
-		name, score, ok := h.leaderboardStore.Top()
-		if ok {
-			h.send(m.client, "leaderboard", LeaderboardPayload{
-				TopName:  name,
-				TopScore: score,
-			})
+		if !isCPOnly {
+			name, score, ok := h.leaderboardStore.Top()
+			if ok {
+				h.send(m.client, "leaderboard", LeaderboardPayload{
+					TopName:  name,
+					TopScore: score,
+				})
+			}
 		}
 
 	case "input":
@@ -444,7 +467,9 @@ func (h *Hub) step(dt float64) {
 	}
 
 	for c := range h.clients {
-		h.sendStateTo(c)
+		if !c.cpOnly {
+			h.sendStateTo(c)
+		}
 	}
 }
 

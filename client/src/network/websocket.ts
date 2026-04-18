@@ -3,6 +3,7 @@ import type { ClientMsg, ServerMsg } from "./protocol";
 export class NetClient {
   private ws: WebSocket | null = null;
   private handlers: Array<(m: ServerMsg) => void> = [];
+  private closeHandlers: Array<() => void> = [];
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -34,6 +35,7 @@ export class NetClient {
       };
       ws.onclose = () => {
         this.ws = null;
+        for (const h of this.closeHandlers) h();
       };
     });
   }
@@ -45,6 +47,48 @@ export class NetClient {
 
   onMessage(h: (m: ServerMsg) => void): void {
     this.handlers.push(h);
+  }
+
+  offMessage(h: (m: ServerMsg) => void): void {
+    this.handlers = this.handlers.filter((fn) => fn !== h);
+  }
+
+  onClose(h: () => void): void {
+    this.closeHandlers.push(h);
+  }
+
+  offClose(h: () => void): void {
+    this.closeHandlers = this.closeHandlers.filter((fn) => fn !== h);
+  }
+
+  /** Wait for a specific message type. Rejects after timeout or disconnect. */
+  waitFor<T extends ServerMsg["type"]>(
+    type: T,
+    timeout = 5000,
+  ): Promise<Extract<ServerMsg, { type: T }>> {
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        clearTimeout(timer);
+        this.offMessage(msgHandler);
+        this.offClose(closeHandler);
+      };
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error(`timeout waiting for ${type}`));
+      }, timeout);
+      const msgHandler = (msg: ServerMsg) => {
+        if (msg.type === type) {
+          cleanup();
+          resolve(msg as Extract<ServerMsg, { type: T }>);
+        }
+      };
+      const closeHandler = () => {
+        cleanup();
+        reject(new Error(`disconnected while waiting for ${type}`));
+      };
+      this.handlers.push(msgHandler);
+      this.closeHandlers.push(closeHandler);
+    });
   }
 
   isOpen(): boolean {
