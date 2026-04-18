@@ -264,6 +264,16 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Stop background music.
+   * Called by DeathScreen when player dies.
+   */
+  public stopBgm(): void {
+    if (this.bgm && this.bgm.isPlaying) {
+      this.bgm.stop();
+    }
+  }
+
   private createFoodTextures(): void {
     if (this.textures.exists("food_green")) return;
 
