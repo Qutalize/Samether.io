@@ -36,7 +36,7 @@ func TestSharkSegmentsFollow(t *testing.T) {
 				i, i-1, s.Segments[i], s.Segments[i-1])
 		}
 		d := s.Segments[i].Dist(s.Segments[i-1])
-		want := SegmentSpacing * s.SizeScale()
+		want := SegmentSpacing
 		if math.Abs(d-want) > 0.5 {
 			t.Fatalf("segment %d distance = %v, want %v", i, d, want)
 		}

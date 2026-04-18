@@ -19,11 +19,11 @@ const (
 	DashMultiplier  = 2.0
 	DashDurationSec = 1.0
 
-	SegmentSpacing    = 12.0
+	SegmentSpacing    = 5.5
 	CollisionHeadRad  = 8.0
 	CollisionBodyRad  = 9.0
-	VisibilityRadius  = 800.0
-	VisibilityStage5  = 1200.0
+	VisibilityRadius  = 2500.0
+	VisibilityStage5  = 4000.0
 	MinPopulation     = 6
 	BaseTurnSpeed     = 4.0 // Radians per second (approx 230 deg/s)
 )
@@ -154,11 +154,11 @@ type StageDef struct {
 }
 
 var Stages = []StageDef{
-	{XPRequired: 0,   SegmentCount: 5,  SizeScale: 1.00},
-	{XPRequired: 10,  SegmentCount: 8,  SizeScale: 1.15},
-	{XPRequired: 25,  SegmentCount: 12, SizeScale: 1.30},
-	{XPRequired: 50,  SegmentCount: 18, SizeScale: 1.50},
-	{XPRequired: 100, SegmentCount: 26, SizeScale: 1.75},
+	{XPRequired: 0,   SegmentCount: 24, SizeScale: 1.3},
+	{XPRequired: 10,  SegmentCount: 24, SizeScale: 1.625},
+	{XPRequired: 25,  SegmentCount: 24, SizeScale: 2.015},
+	{XPRequired: 50,  SegmentCount: 24, SizeScale: 2.47},
+	{XPRequired: 100, SegmentCount: 24, SizeScale: 2.99},
 }
 
 // StageFromXP returns zero-based stage index for accumulated XP.
@@ -222,12 +222,21 @@ func (w *World) SpawnFoodsTo(count int) {
 // ConsumeFoods checks all sharks vs all foods. Returns eaten food IDs.
 func (w *World) ConsumeFoods() []string {
 	var eaten []string
+	defaultTrait := &DefaultTrait{} // 使い回し用
+
 	for fid, f := range w.Foods {
 		for _, s := range w.Sharks {
 			if !s.Alive {
 				continue
 			}
-			if s.Head.Dist(f.Pos) <= FoodPickupDist {
+
+			// 特性に応じた判定
+			trait := s.Trait
+			if trait == nil {
+				trait = defaultTrait
+			}
+
+			if trait.CanConsume(s, f) {
 				s.XP++
 				eaten = append(eaten, fid)
 				delete(w.Foods, fid)
@@ -242,12 +251,13 @@ func (w *World) ConsumeFoods() []string {
 // (1 food per segment, evenly sampled if more than 20 segments).
 // Returns the number of foods dropped.
 func (w *World) ScatterDeadShark(s *Shark) int {
-	const cap = 20
-	n := len(s.Segments)
-	drop := n
-	if drop > cap {
-		drop = cap
+	dropCounts := []int{5, 8, 12, 18, 20}
+	drop := 5
+	if s.Stage >= 0 && s.Stage < len(dropCounts) {
+		drop = dropCounts[s.Stage]
 	}
+
+	n := len(s.Segments)
 	margin := 50.0
 	for i := 0; i < drop; i++ {
 		idx := i * n / drop
@@ -268,4 +278,21 @@ func (w *World) ScatterDeadShark(s *Shark) int {
 		w.Foods[id] = &Food{ID: id, Pos: pos, IsRed: true}
 	}
 	return drop
+}
+
+// AssignTraitToShark はサメの Stage と Route に応じて特性を割り当て
+func AssignTraitToShark(s *Shark) {
+	// Stage 4 Non-Attack = ジンベエザメ
+	if s.Stage == 4 && s.Route == RouteNonAttack {
+		if s.Trait == nil || s.Trait.ID() != "suction" {
+			s.Trait = &SuctionTrait{}
+		}
+		return
+	}
+
+	// 他の特性も将来ここで割り当て
+	// 例: Stage 4 Deep-Sea = Greenland Shark → StealthTrait
+
+	// 該当なしの場合は nil（DefaultTrait相当）
+	s.Trait = nil
 }

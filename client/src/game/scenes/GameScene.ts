@@ -17,9 +17,10 @@ import { RadarRenderer } from "../hud/RadarRenderer";
 import { XpBar } from "../hud/XpBar";
 import { LeaderboardPanel } from "../hud/LeaderboardPanel";
 import { GameState } from "../state/GameState";
+import { SuctionEffect } from "../effects/SuctionEffect";
 
 /* ── constants ─────────────────────────────────────────────── */
-const STAGE_ZOOMS = [1.0, 0.93, 0.88, 0.82, 0.76];
+const STAGE_ZOOMS = [1.0, 0.82, 0.65, 0.48, 0.35];
 
 const ENABLE_TRAIL_ON_HOLD = true;
 const TRAIL_POINT_SPACING = 12;
@@ -66,6 +67,10 @@ export class GameScene extends Phaser.Scene {
 
   private trailGraphics!: Phaser.GameObjects.Graphics;
   private pointerTrail: Phaser.Math.Vector2[] = [];
+
+  /* special effects */
+  private suctionEffect!: SuctionEffect;
+  private isWhaleShark = false; // 自分がジンベエザメか
 
   /* atmosphere */
   private bgShader!: Phaser.GameObjects.Shader;
@@ -123,6 +128,9 @@ export class GameScene extends Phaser.Scene {
 
     this.trailGraphics = this.add.graphics().setDepth(-1);
     this.worldContainer.add(this.trailGraphics);
+
+    /* special effects */
+    this.suctionEffect = new SuctionEffect(this);
 
     /* Vignette overlay – added first so it renders behind all UI elements */
     const vignetteKey = this.myRoute === "deep-sea" ? "vignette_deepsea" : "vignette_default";
@@ -285,13 +293,24 @@ export class GameScene extends Phaser.Scene {
 
     for (const { srcKey, outKey } of SHARK_DEFS) {
       if (this.textures.exists(outKey)) continue;
-      const src = this.textures.get(srcKey).getSourceImage() as HTMLImageElement;
-      if (!src) continue;
+      const srcFrame = this.textures.get(srcKey).get();
+      const srcWidth = srcFrame.width;
+      const srcHeight = srcFrame.height;
+      if (!srcWidth || !srcHeight) continue;
+
       const canvas = document.createElement("canvas");
       canvas.width = 130;
       canvas.height = 71;
       const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(src, 0, 0, 130, 71);
+      
+      // Calculate aspect-fit scaling to normalize different image sizes into 130x71
+      const scale = Math.min(130 / srcWidth, 71 / srcHeight);
+      const dw = srcWidth * scale;
+      const dh = srcHeight * scale;
+      const dx = (130 - dw) / 2;
+      const dy = (71 - dh) / 2;
+
+      ctx.drawImage(srcFrame.source.image as HTMLImageElement, dx, dy, dw, dh);
       const imgData = ctx.getImageData(0, 0, 130, 71);
       const data = imgData.data;
       for (let i = 0; i < data.length; i += 4) {
@@ -446,6 +465,18 @@ export class GameScene extends Phaser.Scene {
       this.gameState.setMyId(m.you.id);
     }
 
+    // Stage 4 Non-Attack になったらジンベエザメフラグを立てる
+    if (m.you) {
+      const newIsWhaleShark = m.you.stage === 4 && this.myRoute === "non-attack";
+      const becameWhaleShark = !this.isWhaleShark && newIsWhaleShark;
+      this.isWhaleShark = newIsWhaleShark;
+
+      // ジンベエザメになった場合、餌消失を検出してエフェクト表示
+      if (this.isWhaleShark && m.foods) {
+        this.updateFoodWithEffect(m.foods);
+      }
+    }
+
     if (m.full) {
       this.gameState.applyFullState(m);
     } else {
@@ -479,6 +510,26 @@ export class GameScene extends Phaser.Scene {
 
       /* XP bar */
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
+    }
+  }
+
+  // 餌の更新時にエフェクトを表示（ジンベエザメ専用）
+  private updateFoodWithEffect(foods: Array<{ id: string; x: number; y: number; isRed?: boolean }>): void {
+    const newFoodIds = new Set(foods.map((f) => f.id));
+    const prevFoodIds = new Set(this.gameState.getFoods().keys());
+
+    // 消えた餌のIDを検出
+    const removedIds = [...prevFoodIds].filter((id) => !newFoodIds.has(id));
+
+    // 消えた餌に対してエフェクトを表示
+    for (const id of removedIds) {
+      const food = this.gameState.getFoods().get(id);
+      if (food) {
+        const myShark = this.gameState.getSharks().get(this.myId);
+        if (myShark) {
+          this.suctionEffect.playAt(food.x, food.y, myShark.x, myShark.y);
+        }
+      }
     }
   }
 

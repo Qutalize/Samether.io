@@ -39,6 +39,7 @@ type Shark struct {
 	TargetFoodID       string
 	AbandonedFoodID    string
 	AbandonedUntilTick int64
+	Trait              Trait // 特性（nil = DefaultTrait）
 }
 
 func NewShark(id, name string, spawn Vec) *Shark {
@@ -78,8 +79,8 @@ func (s *Shark) Move(dt float64, dash bool) {
 		diff += 2 * math.Pi
 	}
 
-	// Turn speed decreases as size increases
-	turnSpeed := BaseTurnSpeed / s.SizeScale()
+	// Turn speed decreases as size increases, but use sqrt to keep large sharks maneuverable
+	turnSpeed := BaseTurnSpeed / math.Sqrt(s.SizeScale())
 	turnStep := turnSpeed * dt
 
 	if diff > turnStep {
@@ -111,7 +112,7 @@ func (s *Shark) Move(dt float64, dash bool) {
 	s.Head = newHead
 	s.Segments[0] = newHead
 
-	spacing := SegmentSpacing * s.SizeScale()
+	spacing := SegmentSpacing // No multiplication by s.SizeScale() to match client visuals
 	for i := 1; i < len(s.Segments); i++ {
 		prev := s.Segments[i-1]
 		cur := s.Segments[i]
@@ -148,7 +149,7 @@ func (s *Shark) UpdateStage() {
 	// Append new segments behind the current tail, in the opposite direction
 	// of the shark's heading so they fall in naturally.
 	tail := s.Segments[len(s.Segments)-1]
-	spacing := SegmentSpacing * s.SizeScale()
+	spacing := SegmentSpacing
 	for i := len(s.Segments); i < wantCount; i++ {
 		tail = Vec{
 			X: tail.X - math.Cos(s.Angle)*spacing,
