@@ -70,6 +70,14 @@ module "frontend_static" {
   alb_dns_name = module.alb.alb_dns_name
 }
 
+module "github_oidc" {
+  source = "../../modules/github_oidc"
+
+  name_prefix          = local.name_prefix
+  github_repo          = "Qutalize/Samether.io"
+  frontend_bucket_name = module.frontend_static.bucket_name
+}
+
 module "location" {
   source = "../../modules/location"
 
