@@ -189,6 +189,14 @@ export class GameScene extends Phaser.Scene {
       loop: true,
       callback: () => this.sendInput(),
     });
+
+    /* audio */
+    if (this.sound && this.cache.audio.exists("bgm")) {
+      this.bgm = this.sound.add("bgm", { loop: true, volume: 1.0 });
+      if (this.bgm) {
+        this.bgm.play();
+      }
+    }
   }
 
   /* ════════════════════════════════════════════════════════ */
