@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import { addCp, loadCp } from "../../storage/cp";
 
+const SERIF = "'Times New Roman', 'Georgia', serif";
+
 const METERS_PER_CP = 1;
 const MAX_EARN_PER_SESSION = 100;
 const GEO_TIMEOUT_MS = 10000;
@@ -22,69 +24,98 @@ export class CPScreen extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
-    this.cameras.main.setBackgroundColor("#001b44");
+    this.cameras.main.setBackgroundColor("#030a14");
 
-    this.add
-      .text(width / 2, height * 0.15, "CP 獲得", {
-        fontFamily: "system-ui",
-        fontSize: "48px",
+    /* ── title ── */
+    const title = this.add
+      .text(width / 2, height * 0.12, "C P  獲 得", {
+        fontFamily: SERIF,
+        fontSize: "52px",
         color: "#88ccee",
+        letterSpacing: 10,
       })
       .setOrigin(0.5);
 
+    if (title.postFX) {
+      title.postFX.addGlow(0x225588, 6, 0, false, 0.1, 12);
+    }
+
+    /* ── accent lines ── */
+    const lineW = width * 0.45;
+    const lineX = (width - lineW) / 2;
+    const lineGfx = this.add.graphics();
+    lineGfx.lineStyle(1, 0x225588, 0.4);
+    lineGfx.beginPath();
+    lineGfx.moveTo(lineX, height * 0.19);
+    lineGfx.lineTo(lineX + lineW, height * 0.19);
+    lineGfx.strokePath();
+
+    /* ── CP display ── */
     this.cpDisplayText = this.add
-      .text(width / 2, height * 0.27, `所持 CP: ${loadCp()}`, {
-        fontFamily: "system-ui",
-        fontSize: "24px",
-        color: "#ddeeff",
+      .text(width / 2, height * 0.25, `所持 CP: ${loadCp()}`, {
+        fontFamily: SERIF,
+        fontSize: "22px",
+        color: "#6688aa",
       })
       .setOrigin(0.5);
 
+    /* ── instructions ── */
     this.add
       .text(
         width / 2,
-        height * 0.37,
+        height * 0.35,
         `スタート地点で [ スタート ]、目的地で [ ゴール ] を押してください\n移動距離 ${METERS_PER_CP} m につき 1 CP (1 回最大 ${MAX_EARN_PER_SESSION} CP)`,
         {
-          fontFamily: "system-ui",
+          fontFamily: SERIF,
           fontSize: "15px",
-          color: "#6688aa",
+          color: "#4a6a8a",
           align: "center",
+          letterSpacing: 2,
         },
       )
       .setOrigin(0.5);
 
+    /* ── status ── */
     this.statusText = this.add
-      .text(width / 2, height * 0.5, "待機中", {
-        fontFamily: "system-ui",
+      .text(width / 2, height * 0.48, "待機中", {
+        fontFamily: SERIF,
         fontSize: "22px",
-        color: "#aaaaaa",
+        color: "#4a6a8a",
       })
       .setOrigin(0.5);
 
+    /* ── start button ── */
     this.startBtn = this.add
-      .text(width / 2, height * 0.62, "[ スタート ]", {
-        fontFamily: "system-ui",
-        fontSize: "32px",
+      .text(width / 2, height * 0.60, "─  スタート  ─", {
+        fontFamily: SERIF,
+        fontSize: "28px",
         color: "#44ff88",
+        letterSpacing: 8,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.handleStart());
 
+    if (this.startBtn.postFX) {
+      this.startBtn.postFX.addGlow(0x22aa55, 4, 0, false, 0.1, 8);
+    }
+
+    /* ── goal button ── */
     this.goalBtn = this.add
-      .text(width / 2, height * 0.73, "[ ゴール ]", {
-        fontFamily: "system-ui",
-        fontSize: "32px",
+      .text(width / 2, height * 0.72, "[ ゴール ]", {
+        fontFamily: SERIF,
+        fontSize: "22px",
         color: "#555555",
+        letterSpacing: 4,
       })
       .setOrigin(0.5)
       .on("pointerdown", () => this.handleGoal());
 
+    /* ── back button ── */
     this.add
       .text(width / 2, height * 0.87, "[ ホームへ戻る ]", {
-        fontFamily: "system-ui",
-        fontSize: "22px",
+        fontFamily: SERIF,
+        fontSize: "18px",
         color: "#6688aa",
       })
       .setOrigin(0.5)
