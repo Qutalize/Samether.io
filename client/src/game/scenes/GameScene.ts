@@ -76,6 +76,9 @@ export class GameScene extends Phaser.Scene {
   private bgShader!: Phaser.GameObjects.Shader;
   private vignetteOverlay!: Phaser.GameObjects.Image;
 
+  /* audio */
+  private bgm?: Phaser.Sound.BaseSound;
+
   constructor() {
     super({ key: "GameScene" });
   }
