@@ -51,6 +51,7 @@ module "ecs_service" {
   room_capacity             = var.room_capacity
   redis_primary_endpoint    = module.redis.primary_endpoint_address
   location_tracker_name     = module.location.tracker_name
+  allowed_origin            = var.allowed_origin
 }
 
 module "redis" {
@@ -65,7 +66,16 @@ module "redis" {
 module "frontend_static" {
   source = "../../modules/frontend_static"
 
-  name_prefix = local.name_prefix
+  name_prefix  = local.name_prefix
+  alb_dns_name = module.alb.alb_dns_name
+}
+
+module "github_oidc" {
+  source = "../../modules/github_oidc"
+
+  name_prefix          = local.name_prefix
+  github_repo          = "Qutalize/Samether.io"
+  frontend_bucket_name = module.frontend_static.bucket_name
 }
 
 module "location" {
