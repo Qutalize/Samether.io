@@ -16,7 +16,7 @@ func TestTerritoryManager_CreateTerritory(t *testing.T) {
 		{X: 0, Y: 0},
 	}
 
-	territory := tm.CreateTerritory("shark1", 2, polygon)
+	territory := tm.CreateTerritory("shark1", "attack", 2, polygon)
 
 	if territory == nil {
 		t.Fatal("Expected territory to be created")
@@ -41,8 +41,8 @@ func TestTerritoryManager_UpdateSharkLevel(t *testing.T) {
 	polygon := []Vec{{X: 0, Y: 0}, {X: 100, Y: 0}, {X: 100, Y: 100}, {X: 0, Y: 0}}
 
 	// Create two territories for the same shark
-	t1 := tm.CreateTerritory("shark1", 2, polygon)
-	t2 := tm.CreateTerritory("shark1", 2, polygon)
+	t1 := tm.CreateTerritory("shark1", "attack", 2, polygon)
+	t2 := tm.CreateTerritory("shark1", "attack", 2, polygon)
 
 	// Evolve the shark
 	updated := tm.UpdateSharkLevel("shark1", 3)
@@ -73,7 +73,7 @@ func TestTerritoryManager_CheckCollision(t *testing.T) {
 		{X: 0, Y: 0},
 	}
 
-	tm.CreateTerritory("shark1", 3, polygon)
+	tm.CreateTerritory("shark1", "attack", 3, polygon)
 
 	tests := []struct {
 		name        string
@@ -142,8 +142,8 @@ func TestTerritoryManager_RemoveExpired(t *testing.T) {
 
 	polygon := []Vec{{X: 0, Y: 0}, {X: 100, Y: 0}, {X: 100, Y: 100}, {X: 0, Y: 0}}
 
-	tm.CreateTerritory("shark1", 2, polygon)
-	tm.CreateTerritory("shark2", 3, polygon)
+	tm.CreateTerritory("shark1", "attack", 2, polygon)
+	tm.CreateTerritory("shark2", "non-attack", 3, polygon)
 
 	if tm.Count() != 2 {
 		t.Errorf("Expected 2 territories, got %d", tm.Count())
@@ -169,9 +169,9 @@ func TestTerritoryManager_RemoveSharkTerritories(t *testing.T) {
 	polygon := []Vec{{X: 0, Y: 0}, {X: 100, Y: 0}, {X: 100, Y: 100}, {X: 0, Y: 0}}
 
 	// Create territories for two sharks
-	tm.CreateTerritory("shark1", 2, polygon)
-	tm.CreateTerritory("shark1", 2, polygon)
-	tm.CreateTerritory("shark2", 3, polygon)
+	tm.CreateTerritory("shark1", "attack", 2, polygon)
+	tm.CreateTerritory("shark1", "attack", 2, polygon)
+	tm.CreateTerritory("shark2", "non-attack", 3, polygon)
 
 	if tm.Count() != 3 {
 		t.Errorf("Expected 3 territories, got %d", tm.Count())

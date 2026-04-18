@@ -5,10 +5,14 @@
  * Only stores and manages territories that are relevant to the current player.
  */
 
+import type { SharkRoute } from "../../network/protocol";
+
 export interface Point {
   x: number;
   y: number;
 }
+
+export type TerritoryColor = 'route' | 'danger' | null;
 
 export interface Territory {
   id: string;
@@ -16,7 +20,8 @@ export interface Territory {
   level: number;
   polygon: Point[];
   expiresAt: number;
-  color?: 'green' | 'orange' | 'gray';
+  route?: SharkRoute;
+  color?: TerritoryColor;
 }
 
 export class TerritoryCache {
@@ -98,25 +103,25 @@ export class TerritoryCache {
   }
 
   /**
-   * Get territories by color
+   * Get territories by color type
    */
-  getByColor(color: 'green' | 'orange' | 'gray'): Territory[] {
+  getByColor(color: TerritoryColor): Territory[] {
     return Array.from(this.territories.values())
       .filter(t => t.color === color);
   }
 
   /**
-   * Get only dangerous territories (orange)
+   * Get only dangerous territories (higher level, orange)
    */
   getDangerousTerritories(): Territory[] {
-    return this.getByColor('orange');
+    return this.getByColor('danger');
   }
 
   /**
-   * Get only own territories (green)
+   * Get only own territories (route color)
    */
   getMyTerritories(): Territory[] {
-    return this.getByColor('green');
+    return this.getByColor('route');
   }
 
   /**
@@ -166,23 +171,18 @@ export class TerritoryCache {
    * Calculate the display color for a territory
    * Returns null if the territory should not be displayed
    */
-  private calculateColor(territory: Territory): 'green' | 'orange' | 'gray' | null {
-    // Own territories are always green
+  private calculateColor(territory: Territory): TerritoryColor {
+    // Own territories use route color
     if (territory.sharkId === this.mySharkId) {
-      return 'green';
+      return 'route';
     }
 
     // Higher level territories are dangerous (orange)
     if (territory.level > this.myLevel) {
-      return 'orange';
+      return 'danger';
     }
 
-    // Same level territories are neutral (gray) - optional display
-    if (territory.level === this.myLevel) {
-      return 'gray';
-    }
-
-    // Lower level territories are not displayed
+    // Same level or lower territories are not displayed
     return null;
   }
 

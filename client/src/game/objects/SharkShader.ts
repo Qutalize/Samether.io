@@ -56,7 +56,10 @@ export const SharkShader = {
   `,
 };
 
-export class SharkPipeline extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
+// Type assertion for Phaser 3.90 Pipeline API
+const BasePipeline = (Phaser.Renderer.WebGL as any).Pipelines?.PostFXPipeline || Object;
+
+export class SharkPipeline extends BasePipeline {
   private _color: Phaser.Display.Color;
   private _bellyColor: Phaser.Display.Color;
 
@@ -72,14 +75,16 @@ export class SharkPipeline extends Phaser.Renderer.WebGL.Pipelines.PostFXPipelin
   }
 
   onPreRender() {
-    this.setTime("uTime");
-    this.set3f(
+    // Phaser 3.80 PostFXPipeline methods
+    const pipeline = this as any;
+    pipeline.set1f("uTime", pipeline.game.loop.time);
+    pipeline.set3f(
       "uColor",
       this._color.red / 255,
       this._color.green / 255,
       this._color.blue / 255,
     );
-    this.set3f(
+    pipeline.set3f(
       "uBellyColor",
       this._bellyColor.red / 255,
       this._bellyColor.green / 255,

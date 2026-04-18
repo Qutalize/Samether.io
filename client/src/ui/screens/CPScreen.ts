@@ -12,11 +12,16 @@ const UPDATE_INTERVAL_MS = 5_000;
 type Phase = "idle" | "connecting" | "measuring" | "done";
 
 export class CPScreen extends Phaser.Scene {
+  private titleText!: Phaser.GameObjects.Text;
+  private lineGfx!: Phaser.GameObjects.Graphics;
+  private instructionText!: Phaser.GameObjects.Text;
+  private backBtn!: Phaser.GameObjects.Text;
   private cpDisplayText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private distText!: Phaser.GameObjects.Text;
   private startBtn!: Phaser.GameObjects.Text;
-  private stopBtn!: Phaser.GameObjects.Text;
+  private goalBtn!: Phaser.GameObjects.Text;
+  private resizeHandler!: (size: Phaser.Structs.Size) => void;
 
   private phase: Phase = "idle";
   private watchId: number | null = null;
@@ -40,118 +45,113 @@ export class CPScreen extends Phaser.Scene {
   /* ------------------------------------------------------------------ */
 
   create(): void {
-    const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor("#030a14");
 
-    /* ── title ── */
-    const title = this.add
-      .text(width / 2, height * 0.54, "C P  獲 得", {
+    this.titleText = this.add.text(0, 0, "C P  獲 得", {
+      fontFamily: SERIF,
+      fontSize: "52px",
+      color: "#88ccee",
+      letterSpacing: 10,
+    }).setOrigin(0.5);
+
+    this.lineGfx = this.add.graphics();
+
+    this.cpDisplayText = this.add.text(0, 0, `所持 CP: ${loadCp()}`, {
+      fontFamily: SERIF,
+      fontSize: "22px",
+      color: "#6688aa",
+    }).setOrigin(0.5);
+
+    this.instructionText = this.add.text(
+      0,
+      0,
+      "[ スタート ] を押して歩くと自動で CP が貯まります",
+      {
         fontFamily: SERIF,
-        fontSize: "52px",
-        color: "#88ccee",
-        letterSpacing: 10,
-      })
-      .setOrigin(0.5);
-
-    if (title.postFX) {
-      title.postFX.addGlow(0x225588, 6, 0, false, 0.1, 12);
-    }
-
-    /* ── accent line ── */
-    const lineW = width * 0.45;
-    const lineX = (width - lineW) / 2;
-    const lineGfx = this.add.graphics();
-    lineGfx.lineStyle(1, 0x225588, 0.4);
-    lineGfx.beginPath();
-    lineGfx.moveTo(lineX, height * 0.60);
-    lineGfx.lineTo(lineX + lineW, height * 0.60);
-    lineGfx.strokePath();
-
-    /* ── CP display ── */
-    this.cpDisplayText = this.add
-      .text(width / 2, height * 0.64, `所持 CP: ${loadCp()}`, {
-        fontFamily: SERIF,
-        fontSize: "22px",
-        color: "#6688aa",
-      })
-      .setOrigin(0.5);
-
-    /* ── instructions ── */
-    this.add
-      .text(
-        width / 2,
-        height * 0.70,
-        "[ スタート ] を押して歩くと自動で CP が貯まります",
-        {
-          fontFamily: SERIF,
-          fontSize: "15px",
-          color: "#4a6a8a",
-          align: "center",
-          letterSpacing: 2,
-        },
-      )
-      .setOrigin(0.5);
-
-    /* ── status ── */
-    this.statusText = this.add
-      .text(width / 2, height * 0.76, "待機中", {
-        fontFamily: SERIF,
-        fontSize: "22px",
+        fontSize: "15px",
         color: "#4a6a8a",
-      })
-      .setOrigin(0.5);
+        align: "center",
+        letterSpacing: 2,
+      },
+    ).setOrigin(0.5);
 
-    /* ── distance display ── */
-    this.distText = this.add
-      .text(width / 2, height * 0.81, "", {
-        fontFamily: SERIF,
-        fontSize: "18px",
-        color: "#6688aa",
-      })
-      .setOrigin(0.5);
+    this.statusText = this.add.text(0, 0, "待機中", {
+      fontFamily: SERIF,
+      fontSize: "22px",
+      color: "#4a6a8a",
+    }).setOrigin(0.5);
 
-    /* ── start button ── */
-    this.startBtn = this.add
-      .text(width / 2, height * 0.88, "─  スタート  ─", {
-        fontFamily: SERIF,
-        fontSize: "28px",
-        color: "#44ff88",
-        letterSpacing: 8,
-      })
+    this.distText = this.add.text(0, 0, "", {
+      fontFamily: SERIF,
+      fontSize: "18px",
+      color: "#6688aa",
+    }).setOrigin(0.5);
+
+    this.startBtn = this.add.text(0, 0, "─  スタート  ─", {
+      fontFamily: SERIF,
+      fontSize: "28px",
+      color: "#44ff88",
+      letterSpacing: 8,
+    })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.handleStart());
 
-    if (this.startBtn.postFX) {
-      this.startBtn.postFX.addGlow(0x22aa55, 4, 0, false, 0.1, 8);
-    }
-
-    /* ── stop button ── */
-    this.stopBtn = this.add
-      .text(width / 2, height * 0.88, "[ ストップ ]", {
-        fontFamily: SERIF,
-        fontSize: "22px",
-        color: "#555555",
-        letterSpacing: 4,
-      })
+    this.goalBtn = this.add.text(0, 0, "[ ストップ ]", {
+      fontFamily: SERIF,
+      fontSize: "22px",
+      color: "#555555",
+      letterSpacing: 4,
+    })
       .setOrigin(0.5)
       .on("pointerdown", () => this.handleStop());
 
-    /* ── back button ── */
-    this.add
-      .text(width / 2, height * 0.95, "[ ホームへ戻る ]", {
-        fontFamily: SERIF,
-        fontSize: "18px",
-        color: "#6688aa",
-      })
+    this.backBtn = this.add.text(0, 0, "[ ホームへ戻る ]", {
+      fontFamily: SERIF,
+      fontSize: "18px",
+      color: "#6688aa",
+    })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.goHome());
+
+    this.layout(this.scale.width, this.scale.height);
+
+    this.resizeHandler = (size: Phaser.Structs.Size) => {
+      this.layout(size.width, size.height);
+    };
+    this.scale.on("resize", this.resizeHandler);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off("resize", this.resizeHandler);
+    });
 
     this.applyPhase();
 
     /* WebSocket メッセージハンドラを登録 */
     net.onMessage((msg: ServerMsg) => this.handleServerMsg(msg));
+  }
+
+  private layout(width: number, height: number): void {
+    this.titleText.setPosition(width / 2, height * 0.12);
+
+    const lineW = width * 0.45;
+    const lineX = (width - lineW) / 2;
+    const lineY = height * 0.19;
+    this.lineGfx.clear();
+    this.lineGfx.lineStyle(1, 0x225588, 0.4);
+    this.lineGfx.beginPath();
+    this.lineGfx.moveTo(lineX, lineY);
+    this.lineGfx.lineTo(lineX + lineW, lineY);
+    this.lineGfx.strokePath();
+
+    this.cpDisplayText.setPosition(width / 2, height * 0.25);
+    this.instructionText.setPosition(width / 2, height * 0.35);
+    this.statusText.setPosition(width / 2, height * 0.48);
+    this.distText.setPosition(width / 2, height * 0.56);
+    this.startBtn.setPosition(width / 2, height * 0.66);
+    this.goalBtn.setPosition(width / 2, height * 0.66);
+    this.backBtn.setPosition(width / 2, height * 0.87);
   }
 
   /* ------------------------------------------------------------------ */
@@ -447,21 +447,21 @@ export class CPScreen extends Phaser.Scene {
       case "idle":
       case "done":
         setEnabled(this.startBtn, true, "#44ff88");
-        setEnabled(this.stopBtn, false, "#ffaa44");
+        setEnabled(this.goalBtn, false, "#ffaa44");
         this.startBtn.setVisible(true);
-        this.stopBtn.setVisible(false);
+        this.goalBtn.setVisible(false);
         break;
       case "connecting":
         setEnabled(this.startBtn, false, "#44ff88");
-        setEnabled(this.stopBtn, false, "#ffaa44");
+        setEnabled(this.goalBtn, false, "#ffaa44");
         this.startBtn.setVisible(true);
-        this.stopBtn.setVisible(false);
+        this.goalBtn.setVisible(false);
         break;
       case "measuring":
         this.startBtn.setVisible(false);
-        this.stopBtn.setVisible(true);
+        this.goalBtn.setVisible(true);
         setEnabled(this.startBtn, false, "#44ff88");
-        setEnabled(this.stopBtn, true, "#ffaa44");
+        setEnabled(this.goalBtn, true, "#ffaa44");
         break;
     }
   }

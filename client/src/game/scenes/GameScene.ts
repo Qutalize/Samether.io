@@ -17,7 +17,9 @@ import { RadarRenderer } from "../hud/RadarRenderer";
 import { XpBar } from "../hud/XpBar";
 import { LeaderboardPanel } from "../hud/LeaderboardPanel";
 import { GameState } from "../state/GameState";
+import { TerritoryManager } from "../territory/TerritoryManager";
 import { SuctionEffect } from "../effects/SuctionEffect";
+import { getRouteColor } from "../config/RouteColors";
 
 /* ── constants ─────────────────────────────────────────────── */
 const STAGE_ZOOMS = [1.0, 0.82, 0.65, 0.48, 0.35];
@@ -42,6 +44,7 @@ export class GameScene extends Phaser.Scene {
   private myId = "";
   private myName = "";
   private myRoute: SharkRoute = "attack";
+  private lastStage = -1;
   private myStage = -1;
 
   /* entity state manager */
@@ -64,6 +67,9 @@ export class GameScene extends Phaser.Scene {
   private xpBar!: XpBar;
   private leaderboardPanel!: LeaderboardPanel;
   private radarRenderer!: RadarRenderer;
+
+  /* territory system */
+  private territoryManager!: TerritoryManager;
 
   private trailGraphics!: Phaser.GameObjects.Graphics;
   private pointerTrail: Phaser.Math.Vector2[] = [];
@@ -102,9 +108,11 @@ export class GameScene extends Phaser.Scene {
   /*  CREATE                                                  */
   /* ════════════════════════════════════════════════════════ */
   create(): void {
-    const renderer = this.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
-    if (renderer.pipelines) {
-      renderer.pipelines.addPostPipeline("SharkShader", SharkPipeline);
+    // Register custom shader pipeline for Phaser 3.80
+    const renderer = this.renderer as any;
+    if (renderer.pipelines && !renderer.pipelines.get("SharkShader")) {
+      const pipelineInstance = new SharkPipeline(this.game);
+      renderer.pipelines.add("SharkShader", pipelineInstance);
     }
 
     this.cameras.main.setBackgroundColor("#001b44");
@@ -119,6 +127,7 @@ export class GameScene extends Phaser.Scene {
     /* Background Shader */
     this.bgShader = this.add.shader("OceanBackground", this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height);
     this.bgShader.setScrollFactor(0);
+    this.bgShader.setUniform('uScroll.value', { x: 0, y: 0 });
     this.bgContainer.add(this.bgShader);
 
     /* world boundary */
@@ -147,6 +156,10 @@ export class GameScene extends Phaser.Scene {
     this.xpBar = new XpBar(this, this.uiContainer, this.myRoute);
     this.leaderboardPanel = new LeaderboardPanel(this, this.uiContainer);
     this.radarRenderer = new RadarRenderer(this, this.uiContainer);
+
+    /* ── Territory System ────────────────── */
+    this.territoryManager = new TerritoryManager(this, this.myRoute);
+    // Will be initialized with player ID and level in onWelcome
 
     /* Camera setup: Main camera ignores UI, UI camera ignores World */
     this.uiCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height);
@@ -208,6 +221,17 @@ export class GameScene extends Phaser.Scene {
 
     if (this.input2) {
       this.input2.update(delta);
+    }
+
+    /* update territory rendering */
+    if (this.territoryManager) {
+      this.territoryManager.update();
+
+      // Check if player is in danger
+      const self = this.gameState.getSharks().get(this.myId);
+      if (self) {
+        this.territoryManager.checkDanger(self.x, self.y);
+      }
     }
 
     this.updateTrail();
@@ -388,13 +412,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const routeColor = this.myRoute ? {
-      attack: 0xff9999,
-      "non-attack": 0x99d4ff,
-      "deep-sea": 0xd099ff,
-    }[this.myRoute] : 0x88ccff;
+    const routeColor = getRouteColor(this.myRoute);
 
-    this.trailGraphics.lineStyle(4, routeColor || 0x88ccff, 0.6);
+    this.trailGraphics.lineStyle(4, routeColor, 0.6);
     this.trailGraphics.beginPath();
     this.trailGraphics.moveTo(this.pointerTrail[0].x, this.pointerTrail[0].y);
     for (let i = 1; i < this.pointerTrail.length; i++) {
@@ -447,6 +467,12 @@ export class GameScene extends Phaser.Scene {
       case "leaderboard":
         this.onLeaderboard(m.payload);
         break;
+      default:
+        // Forward territory-related messages to TerritoryManager
+        if (this.territoryManager) {
+          this.territoryManager.handleMessage(m);
+        }
+        break;
     }
   }
 
@@ -457,6 +483,11 @@ export class GameScene extends Phaser.Scene {
     this.worldH = m.worldH;
     this.drawWorldBorder();
     // this.oceanFloor.setSize(this.worldW, this.worldH);
+
+    // Initialize territory manager with player info
+    if (this.territoryManager) {
+      this.territoryManager.init(m.playerId, 0); // Level 0 at start, will be updated
+    }
   }
 
   private onState(m: StatePayload): void {
@@ -510,6 +541,18 @@ export class GameScene extends Phaser.Scene {
 
       /* XP bar */
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
+
+      /* Update territory manager with current level (only on actual change) */
+      if (this.territoryManager && m.you.stage !== undefined && m.you.stage !== this.lastStage) {
+        this.lastStage = m.you.stage;
+        this.territoryManager.handleMessage({
+          type: 'my_evolution',
+          payload: {
+            newLevel: m.you.stage,
+            recalculateTerritories: true,
+          },
+        });
+      }
     }
   }
 
