@@ -19,7 +19,7 @@ export class DeathScreen extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.audio("sfx_death", "sfx_death.mp3");
+    this.load.audio("sfx_death", "audio/sfx_death.mp3");
   }
 
   init(data: { score: number; stage: number; route?: SharkRoute }): void {

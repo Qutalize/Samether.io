@@ -90,16 +90,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image("shark",           "shark.png");
-    this.load.image("shark_mako",      "shark_mako.png");
-    this.load.image("shark_sandtiger", "shark_sandtiger.png");
-    this.load.image("shark_frilled",   "shark_frilled.png");
-    this.load.image("shark_megalodon", "shark_megalodon.png");
-    this.load.image("shark_whale",     "shark_whale.png");
-    this.load.image("shark_greenland", "shark_greenland.png");
-    this.load.audio("bgm", "bgm.mp3");
-    this.load.audio("sfx_xp_gain", "sfx_xp_gain.mp3");
-    this.load.audio("sfx_levelup", "sfx_levelup.mp3");
+    this.load.image("shark",           "images/shark.png");
+    this.load.image("shark_mako",      "images/shark_mako.png");
+    this.load.image("shark_sandtiger", "images/shark_sandtiger.png");
+    this.load.image("shark_frilled",   "images/shark_frilled.png");
+    this.load.image("shark_megalodon", "images/shark_megalodon.png");
+    this.load.image("shark_whale",     "images/shark_whale.png");
+    this.load.image("shark_greenland", "images/shark_greenland.png");
+    this.load.audio("bgm", "audio/bgm.mp3");
+    this.load.audio("sfx_xp_gain", "audio/sfx_xp_gain.mp3");
+    this.load.audio("sfx_levelup", "audio/sfx_levelup.mp3");
     if (!this.cache.shader.has("OceanBackground")) {
       this.cache.shader.add("OceanBackground", OceanBackgroundShader);
     }
