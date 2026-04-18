@@ -1,12 +1,13 @@
 import Phaser from "phaser";
 import { net } from "../../network/websocket";
 import { SharkRoute } from "../../network/protocol";
+import { loadCp } from "../../storage/cp";
+import { getSession, logout } from "../../storage/auth";
 
 const SERIF = "'Times New Roman', 'Georgia', serif";
 
 export class HomeScreen extends Phaser.Scene {
-  private inputEl!: HTMLInputElement;
-  private pendingName = "";
+  private playerName = "";
   private selectedRoute: SharkRoute = "attack";
 
   constructor() {
@@ -14,6 +15,13 @@ export class HomeScreen extends Phaser.Scene {
   }
 
   create(): void {
+    const session = getSession();
+    if (!session) {
+      this.scene.start("LoginScreen");
+      return;
+    }
+    this.playerName = session;
+
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor("#030a14");
 
@@ -33,7 +41,7 @@ export class HomeScreen extends Phaser.Scene {
 
     /* ── subtitle ── */
     this.add
-      .text(width / 2, height * 0.30, "─  深海のサバイバル  ─", {
+      .text(width / 2, height * 0.30, `ようこそ、${this.playerName}`, {
         fontFamily: SERIF,
         fontSize: "16px",
         color: "#4a6a8a",
@@ -51,41 +59,21 @@ export class HomeScreen extends Phaser.Scene {
     lineGfx.lineTo(lineX + lineW, height * 0.34);
     lineGfx.strokePath();
 
-    /* ── name input (HTML overlay) ── */
-    const existing = document.getElementById("name-input") as HTMLInputElement | null;
-    if (existing) existing.remove();
-    const input = document.createElement("input");
-    input.id = "name-input";
-    input.type = "text";
-    input.placeholder = "名前を入力";
-    input.maxLength = 16;
-    Object.assign(input.style, {
-      position: "absolute",
-      left: "50%",
-      top: "42%",
-      transform: "translate(-50%, -50%)",
-      fontFamily: "'Times New Roman', 'Georgia', serif",
-      fontSize: "18px",
-      padding: "10px 16px",
-      borderRadius: "2px",
-      border: "1px solid #334466",
-      background: "#0a1525",
-      color: "#ccddee",
-      outline: "none",
-      width: "240px",
-      textAlign: "center",
-      letterSpacing: "2px",
-    } as CSSStyleDeclaration);
-    document.body.appendChild(input);
-    input.focus();
-    this.inputEl = input;
-
     /* ── route selection ── */
-    this.createRouteButtons(width / 2, height * 0.55);
+    this.createRouteButtons(width / 2, height * 0.48);
+
+    /* ── CP display ── */
+    this.add
+      .text(width / 2, height * 0.62, `所持 CP: ${loadCp()}`, {
+        fontFamily: SERIF,
+        fontSize: "18px",
+        color: "#6688aa",
+      })
+      .setOrigin(0.5);
 
     /* ── play button ── */
     const playBtn = this.add
-      .text(width / 2, height * 0.72, "─  P L A Y  ─", {
+      .text(width / 2, height * 0.70, "─  P L A Y  ─", {
         fontFamily: SERIF,
         fontSize: "28px",
         color: "#44ff88",
@@ -103,9 +91,30 @@ export class HomeScreen extends Phaser.Scene {
 
     this.input.keyboard?.on("keydown-ENTER", () => this.tryStart());
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      input.remove();
-    });
+    /* ── CP earn button ── */
+    this.add
+      .text(width / 2, height * 0.80, "[ CP 獲得 ]", {
+        fontFamily: SERIF,
+        fontSize: "22px",
+        color: "#ffaa44",
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.scene.start("CPScreen"));
+
+    /* ── logout button ── */
+    this.add
+      .text(width / 2, height * 0.88, "[ ログアウト ]", {
+        fontFamily: SERIF,
+        fontSize: "18px",
+        color: "#ff6666",
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => {
+        logout();
+        this.scene.start("LoginScreen");
+      });
   }
 
   private createRouteButtons(centerX: number, y: number) {
@@ -158,12 +167,10 @@ export class HomeScreen extends Phaser.Scene {
   }
 
   private async tryStart(): Promise<void> {
-    const name = this.inputEl.value.trim() || "unknown";
-    this.pendingName = name;
     try {
       if (!net.isOpen()) await net.connect();
-      net.send({ type: "join", payload: { name, route: this.selectedRoute } });
-      this.scene.start("GameScene", { name, route: this.selectedRoute });
+      net.send({ type: "join", payload: { name: this.playerName, route: this.selectedRoute } });
+      this.scene.start("GameScene", { name: this.playerName, route: this.selectedRoute });
     } catch (e) {
       console.error("connect failed", e);
     }
