@@ -92,33 +92,14 @@ export class CPScreen extends Phaser.Scene {
       color: "#6688aa",
     }).setOrigin(0.5);
 
-    this.startBtn = this.add.text(0, 0, "─  スタート  ─", {
-      fontFamily: SERIF,
-      fontSize: "28px",
-      color: "#44ff88",
-      letterSpacing: 8,
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.handleStart());
+    this.startBtn = this.styledButton("─  スタート  ─", "28px", "#44ff88", "#88ffbb", 0x22aa55, 8);
+    this.startBtn.on("pointerdown", () => this.handleStart());
 
-    this.goalBtn = this.add.text(0, 0, "[ ストップ ]", {
-      fontFamily: SERIF,
-      fontSize: "22px",
-      color: "#555555",
-      letterSpacing: 4,
-    })
-      .setOrigin(0.5)
-      .on("pointerdown", () => this.handleStop());
+    this.goalBtn = this.styledButton("─  ストップ  ─", "22px", "#555555", "#88aacc", 0x446688, 4);
+    this.goalBtn.on("pointerdown", () => this.handleStop());
 
-    this.backBtn = this.add.text(0, 0, "[ ホームへ戻る ]", {
-      fontFamily: SERIF,
-      fontSize: "18px",
-      color: "#6688aa",
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.goHome());
+    this.backBtn = this.styledButton("─  ホームへ戻る  ─", "18px", "#6688aa", "#88bbdd", 0x446688, 4);
+    this.backBtn.on("pointerdown", () => this.goHome());
 
     this.layout(this.scale.width, this.scale.height);
 
