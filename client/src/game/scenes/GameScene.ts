@@ -66,6 +66,9 @@ export class GameScene extends Phaser.Scene {
   private leaderboardPanel!: LeaderboardPanel;
   private radarRenderer!: RadarRenderer;
 
+  /* territory system */
+  private territoryManager!: TerritoryManager;
+
   private trailGraphics!: Phaser.GameObjects.Graphics;
   private pointerTrail: Phaser.Math.Vector2[] = [];
 
@@ -152,6 +155,10 @@ export class GameScene extends Phaser.Scene {
     this.leaderboardPanel = new LeaderboardPanel(this, this.uiContainer);
     this.radarRenderer = new RadarRenderer(this, this.uiContainer);
 
+    /* ── Territory System ────────────────── */
+    this.territoryManager = new TerritoryManager(this);
+    // Will be initialized with player ID and level in onWelcome
+
     /* Camera setup: Main camera ignores UI, UI camera ignores World */
     this.uiCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height);
     this.uiCamera.setScroll(0, 0);
@@ -212,6 +219,17 @@ export class GameScene extends Phaser.Scene {
 
     if (this.input2) {
       this.input2.update(delta);
+    }
+
+    /* update territory rendering */
+    if (this.territoryManager) {
+      this.territoryManager.update();
+
+      // Check if player is in danger
+      const self = this.gameState.getSharks().get(this.myId);
+      if (self) {
+        this.territoryManager.checkDanger(self.x, self.y);
+      }
     }
 
     this.updateTrail();
@@ -451,6 +469,12 @@ export class GameScene extends Phaser.Scene {
       case "leaderboard":
         this.onLeaderboard(m.payload);
         break;
+      default:
+        // Forward territory-related messages to TerritoryManager
+        if (this.territoryManager) {
+          this.territoryManager.handleMessage(m);
+        }
+        break;
     }
   }
 
@@ -461,6 +485,11 @@ export class GameScene extends Phaser.Scene {
     this.worldH = m.worldH;
     this.drawWorldBorder();
     // this.oceanFloor.setSize(this.worldW, this.worldH);
+
+    // Initialize territory manager with player info
+    if (this.territoryManager) {
+      this.territoryManager.init(m.playerId, 0); // Level 0 at start, will be updated
+    }
   }
 
   private onState(m: StatePayload): void {
@@ -514,6 +543,19 @@ export class GameScene extends Phaser.Scene {
 
       /* XP bar */
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
+
+      /* Update territory manager with current level */
+      if (this.territoryManager && m.you.stage !== undefined) {
+        // Trigger evolution event if level changed
+        const currentLevel = m.you.stage;
+        this.territoryManager.handleMessage({
+          type: 'my_evolution',
+          payload: {
+            newLevel: currentLevel,
+            recalculateTerritories: true,
+          },
+        });
+      }
     }
   }
 
