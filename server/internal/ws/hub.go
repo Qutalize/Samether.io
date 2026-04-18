@@ -268,10 +268,15 @@ func (h *Hub) handleInbound(m inboundMsg) {
 		p := payload.(JoinPayload)
 		isCPOnly := strings.HasPrefix(p.Name, "__cp__")
 
-		// CP計測中にplayerIDが保持されている場合は再利用する
+		// playerIDが既にある場合の再join処理
 		if m.client.playerID != "" {
+			if isCPOnly && !m.client.cpOnly {
+				// ゲームクライアントがCPモードに切り替え: サメを削除してCPモードへ
+				delete(h.world.Sharks, m.client.playerID)
+				m.client.cpOnly = true
+			}
+			// CP専用 or 切り替え後: welcomeを返して再利用
 			if m.client.cpOnly {
-				// CP専用クライアントの再joinはwelcomeだけ返す（サメは生成しない）
 				h.send(m.client, "welcome", WelcomePayload{
 					PlayerID: m.client.playerID,
 					WorldW:   game.WorldWidth,
