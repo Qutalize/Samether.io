@@ -96,7 +96,13 @@ export class GameScene extends Phaser.Scene {
     this.load.image("shark_megalodon", "shark_megalodon.png");
     this.load.image("shark_whale",     "shark_whale.png");
     this.load.image("shark_greenland", "shark_greenland.png");
+    console.log("[BGM] Attempting to load bgm.mp3");
     this.load.audio("bgm", "bgm.mp3");
+    this.load.on("loaderror", (file: any) => {
+      if (file.key === "bgm") {
+        console.error("[BGM] Failed to load bgm.mp3 - file not found or invalid format");
+      }
+    });
     if (!this.cache.shader.has("OceanBackground")) {
       this.cache.shader.add("OceanBackground", OceanBackgroundShader);
     }
@@ -191,11 +197,26 @@ export class GameScene extends Phaser.Scene {
     });
 
     /* audio */
+    console.log("[BGM] Checking audio initialization...");
+    console.log("[BGM] Sound manager exists:", !!this.sound);
+    console.log("[BGM] Audio cache contains 'bgm':", this.cache.audio.exists("bgm"));
+
     if (this.sound && this.cache.audio.exists("bgm")) {
+      console.log("[BGM] Creating sound instance...");
       this.bgm = this.sound.add("bgm", { loop: true, volume: 1.0 });
       if (this.bgm) {
-        this.bgm.play();
+        console.log("[BGM] Sound instance created successfully");
+        console.log("[BGM] Attempting to play...");
+        const playResult = this.bgm.play();
+        console.log("[BGM] Play result:", playResult);
+        console.log("[BGM] Is playing:", this.bgm.isPlaying);
+      } else {
+        console.error("[BGM] Failed to create sound instance");
       }
+    } else {
+      console.warn("[BGM] Cannot initialize - sound manager or audio cache missing");
+      if (!this.sound) console.warn("[BGM] - Sound manager is null/undefined");
+      if (!this.cache.audio.exists("bgm")) console.warn("[BGM] - 'bgm' not found in audio cache");
     }
   }
 
