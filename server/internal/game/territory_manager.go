@@ -13,8 +13,8 @@ type Territory struct {
 	Level     int       `json:"level"` // Shark evolution level (1-5)
 	Polygon   []Vec     `json:"polygon"`
 	BBox      BBox      `json:"bbox"`
-	CreatedAt int64     `json:"createdAt"`
-	ExpiresAt int64     `json:"expiresAt"`
+	CreatedAt int64     `json:"createdAt"` // Unix timestamp in milliseconds for WS/JSON payloads
+	ExpiresAt int64     `json:"expiresAt"` // Unix timestamp in milliseconds for WS/JSON payloads
 }
 
 // BBox represents a bounding box for fast collision checks
@@ -54,8 +54,8 @@ func (tm *TerritoryManager) CreateTerritory(sharkID string, level int, polygon [
 		Level:     level,
 		Polygon:   polygon,
 		BBox:      calculateBBox(polygon),
-		CreatedAt: now.Unix(),
-		ExpiresAt: now.Add(tm.lifetime).Unix(),
+		CreatedAt: now.UnixMilli(),
+		ExpiresAt: now.Add(tm.lifetime).UnixMilli(),
 	}
 
 	tm.territories[territory.ID] = territory
