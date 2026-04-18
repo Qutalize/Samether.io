@@ -43,6 +43,7 @@ export class GameScene extends Phaser.Scene {
   private myId = "";
   private myName = "";
   private myRoute: SharkRoute = "attack";
+  private lastStage = -1;
   private myStage = -1;
 
   /* entity state manager */
@@ -544,14 +545,13 @@ export class GameScene extends Phaser.Scene {
       /* XP bar */
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
 
-      /* Update territory manager with current level */
-      if (this.territoryManager && m.you.stage !== undefined) {
-        // Trigger evolution event if level changed
-        const currentLevel = m.you.stage;
+      /* Update territory manager with current level (only on actual change) */
+      if (this.territoryManager && m.you.stage !== undefined && m.you.stage !== this.lastStage) {
+        this.lastStage = m.you.stage;
         this.territoryManager.handleMessage({
           type: 'my_evolution',
           payload: {
-            newLevel: currentLevel,
+            newLevel: m.you.stage,
             recalculateTerritories: true,
           },
         });
