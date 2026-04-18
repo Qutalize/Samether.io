@@ -5,8 +5,10 @@ import { CPScreen } from "./ui/screens/CPScreen";
 import { GameScene } from "./game/scenes/GameScene";
 import { DeathScreen } from "./ui/screens/DeathScreen";
 
+const isMobileDevice = /iphone|ipad|ipod|android/i.test(navigator.userAgent);
+
 const config: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
+  type: isMobileDevice ? Phaser.CANVAS : Phaser.AUTO,
   parent: "game",
   backgroundColor: "#001b44",
   scale: {
