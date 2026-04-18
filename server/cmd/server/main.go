@@ -61,7 +61,13 @@ _, _ = w.Write(sws.MustMarshal("room", hub.RoomSnapshot()))
 })
 
 // WebSocket endpoint
-mux.HandleFunc("/ws", hub.ServeWS)
+mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+if !isAllowedOrigin(r, cfg.AllowedOrigin) {
+http.Error(w, "Forbidden", http.StatusForbidden)
+return
+}
+hub.ServeWS(w, r)
+})
 
 var handler http.Handler = mux
 if cfg.AllowedOrigin != "" {
@@ -98,12 +104,30 @@ next.ServeHTTP(w, r)
 })
 }
 
+func isAllowedOrigin(r *http.Request, allowedOrigin string) bool {
+if allowedOrigin == "" {
+return true
+}
+origin := r.Header.Get("Origin")
+if origin == "" {
+return true
+}
+return origin == allowedOrigin
+}
+
 func corsMiddleware(allowedOrigin string, next http.Handler) http.Handler {
 return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+w.Header().Add("Vary", "Origin")
+if origin := r.Header.Get("Origin"); origin != "" && origin == allowedOrigin {
 w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
 if r.Method == http.MethodOptions {
+if !isAllowedOrigin(r, allowedOrigin) {
+http.Error(w, "Forbidden", http.StatusForbidden)
+return
+}
 w.WriteHeader(http.StatusNoContent)
 return
 }
