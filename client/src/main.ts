@@ -4,6 +4,7 @@ import { HomeScreen } from "./ui/screens/HomeScreen";
 import { CPScreen } from "./ui/screens/CPScreen";
 import { GameScene } from "./game/scenes/GameScene";
 import { DeathScreen } from "./ui/screens/DeathScreen";
+import { GuideScreen } from "./ui/screens/GuideScreen";
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -14,7 +15,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: "100%",
     height: "100%",
   },
-  scene: [LoginScreen, HomeScreen, CPScreen, GameScene, DeathScreen],
+  scene: [LoginScreen, HomeScreen, CPScreen, GuideScreen, GameScene, DeathScreen],
 };
 
 const game = new Phaser.Game(config);

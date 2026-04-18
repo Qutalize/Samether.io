@@ -15,6 +15,7 @@ export class HomeScreen extends Phaser.Scene {
   private cpText!: Phaser.GameObjects.Text;
   private playBtn!: Phaser.GameObjects.Text;
   private cpBtn!: Phaser.GameObjects.Text;
+  private guideBtn!: Phaser.GameObjects.Text;
   private logoutBtn!: Phaser.GameObjects.Text;
   private routeButtons: Phaser.GameObjects.Text[] = [];
   private resizeHandler!: (size: Phaser.Structs.Size) => void;
@@ -65,6 +66,9 @@ export class HomeScreen extends Phaser.Scene {
     this.cpBtn = this.styledButton("─  C P 獲 得  ─", "22px", "#ffaa44", "#ffcc88", 0xaa7722, 6);
     this.cpBtn.on("pointerdown", () => this.scene.start("CPScreen"));
 
+    this.guideBtn = this.styledButton("─  ガイド  ─", "20px", "#6688aa", "#88bbdd", 0x446688, 6);
+    this.guideBtn.on("pointerdown", () => this.scene.start("GuideScreen"));
+
     this.logoutBtn = this.styledButton("─  ログアウト  ─", "18px", "#884444", "#ff6666", 0x882222, 4);
     this.logoutBtn.on("pointerdown", () => {
       logout();
@@ -98,10 +102,11 @@ export class HomeScreen extends Phaser.Scene {
     this.lineGfx.strokePath();
 
     this.layoutRouteButtons(width / 2, height * 0.48);
-    this.cpText.setPosition(width / 2, height * 0.62).setText(`所持 CP: ${loadCp()}`);
-    this.playBtn.setPosition(width / 2, height * 0.70);
-    this.cpBtn.setPosition(width / 2, height * 0.80);
-    this.logoutBtn.setPosition(width / 2, height * 0.88);
+    this.cpText.setPosition(width / 2, height * 0.58).setText(`所持 CP: ${loadCp()}`);
+    this.playBtn.setPosition(width / 2, height * 0.65);
+    this.cpBtn.setPosition(width / 2, height * 0.73);
+    this.guideBtn.setPosition(width / 2, height * 0.81);
+    this.logoutBtn.setPosition(width / 2, height * 0.89);
   }
 
   private createRouteButtons(): void {
