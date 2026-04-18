@@ -66,7 +66,8 @@ module "redis" {
 module "frontend_static" {
   source = "../../modules/frontend_static"
 
-  name_prefix = local.name_prefix
+  name_prefix  = local.name_prefix
+  alb_dns_name = module.alb.alb_dns_name
 }
 
 module "location" {
