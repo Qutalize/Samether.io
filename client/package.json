@@ -11,7 +11,7 @@
     "phaser": "^3.80.1"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
+    "typescript": "^6.0.3",
     "vite": "^5.2.0"
   }
 }
