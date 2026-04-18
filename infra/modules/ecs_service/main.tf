@@ -44,6 +44,10 @@ resource "aws_ecs_task_definition" "this" {
         {
           name  = "LOCATION_TRACKER_NAME"
           value = var.location_tracker_name
+        },
+        {
+          name  = "ALLOWED_ORIGIN"
+          value = var.allowed_origin
         }
       ]
       logConfiguration = {
