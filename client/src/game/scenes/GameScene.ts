@@ -107,6 +107,7 @@ export class GameScene extends Phaser.Scene {
     this.load.audio("bgm", "audio/bgm.mp3");
     this.load.audio("sfx_xp_gain", "audio/sfx_xp_gain.mp3");
     this.load.audio("sfx_levelup", "audio/sfx_levelup.mp3");
+    this.load.audio("human_scream", "audio/human_scream.mp3");
     if (!this.cache.shader.has("OceanBackground")) {
       this.cache.shader.add("OceanBackground", OceanBackgroundShader);
     }
@@ -622,7 +623,7 @@ export class GameScene extends Phaser.Scene {
   private onDeath(m: DeathPayload): void {
     // Play scream sound for human mode
     if (this.myRoute === "human") {
-      this.sound.play("sfx_death", { volume: 0.8 });
+      this.sound.play("human_scream", { volume: 0.8 });
     }
     this.scene.start("DeathScreen", { score: m.score, stage: m.stage, route: this.myRoute });
   }
