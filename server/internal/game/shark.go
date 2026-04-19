@@ -34,6 +34,7 @@ type Shark struct {
 	XP                 int
 	Stage              int // zero-based index into Stages
 	DashUntilTick      int64
+	SpeedBoostUntilTick int64
 	Alive              bool
 	IsBot              bool
 	TargetFoodID       string
@@ -103,6 +104,9 @@ func (s *Shark) Move(dt float64, dash bool) {
 	speed := BaseSpeed
 	if dash {
 		speed *= DashMultiplier
+	}
+	if s.SpeedBoostUntilTick > 0 {
+		speed *= 1.5
 	}
 	dx := math.Cos(s.Angle) * speed * dt
 	dy := math.Sin(s.Angle) * speed * dt
