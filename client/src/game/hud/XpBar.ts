@@ -49,11 +49,10 @@ export class XpBar implements HudComponent {
 
     this.drawBar(xp, threshold);
     this.scoreText.setText(isMax ? `${xp} XP` : `${xp} / ${threshold} XP`);
-    this.stageText.setText(
-      ROUTE_STAGE_NAMES[route][
-        Math.min(stage, ROUTE_STAGE_NAMES[route].length - 1)
-      ],
-    );
+    const stageName = ROUTE_STAGE_NAMES[route][
+      Math.min(stage, ROUTE_STAGE_NAMES[route].length - 1)
+    ];
+    this.stageText.setText(`${stageName} (Lv.${stage + 1})`);
   }
 
   private drawBar(xp: number, threshold: number): void {
