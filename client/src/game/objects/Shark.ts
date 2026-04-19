@@ -26,6 +26,7 @@ const BASE_SPACING = 5.5;
 
 export class Shark extends Phaser.GameObjects.Container {
   private rope: Phaser.GameObjects.Rope;
+  private humanSprite?: Phaser.GameObjects.Sprite; // Simple sprite for human mode
   private nameText: Phaser.GameObjects.Text;
   private territoryRenderer: TerritoryRenderer;
 
@@ -146,6 +147,18 @@ export class Shark extends Phaser.GameObjects.Container {
     if (route !== this.route) {
       this.route = route;
       changedAppearance = true;
+
+      // Initialize human sprite if switching to human mode
+      if (route === "human" && !this.humanSprite) {
+        this.rope.setVisible(false);
+        this.humanSprite = (this.scene as Phaser.Scene).add.sprite(0, 0, "diver");
+        this.humanSprite.setScale(0.5); // Adjust size as needed
+        this.add(this.humanSprite);
+      } else if (route !== "human" && this.humanSprite) {
+        this.humanSprite.destroy();
+        this.humanSprite = undefined;
+        this.rope.setVisible(true);
+      }
     }
 
     if (boosted !== this.boosted) {
@@ -153,59 +166,67 @@ export class Shark extends Phaser.GameObjects.Container {
       changedAppearance = true;
     }
 
-    if (changedAppearance) {
+    if (changedAppearance && route !== "human") {
       this.updateColors();
     }
 
-    /* rigid head segments (hardly bend) */
-    this.spine[0].set(x, y);
-    for (let i = 1; i < 4; i++) {
-      this.spine[i].set(
-        this.spine[i - 1].x - Math.cos(angle) * BASE_SPACING,
-        this.spine[i - 1].y - Math.sin(angle) * BASE_SPACING,
-      );
-    }
-
-    /* trailing segments follow like a rope */
-    for (let i = 4; i < SEGMENT_COUNT; i++) {
-      const prev = this.spine[i - 1];
-      const curr = this.spine[i];
-      const dist = Phaser.Math.Distance.BetweenPoints(prev, curr);
-      if (dist > BASE_SPACING) {
-        const a = Phaser.Math.Angle.BetweenPoints(curr, prev);
-        curr.x = prev.x - Math.cos(a) * BASE_SPACING;
-        curr.y = prev.y - Math.sin(a) * BASE_SPACING;
-      }
-    }
-
-    /* compute display points (spine + wave offset) */
-    const pts: Phaser.Math.Vector2[] = [];
-
-    // Our image is facing RIGHT. Tail is at left (x=0), Head is at right (x=width).
-    // Rope with horizontal=true maps texture x=0 to pts[0], and x=width to pts[length-1].
-    // So pts[0] MUST be the TAIL, and pts[23] MUST be the HEAD.
-    // spine[0] is HEAD. spine[23] is TAIL.
-    for (let i = SEGMENT_COUNT - 1; i >= 0; i--) {
-      const sp = this.spine[i];
-      let sa = this.targetAngle;
-      if (i > 0) {
-        sa = Phaser.Math.Angle.BetweenPoints(this.spine[i], this.spine[i - 1]);
+    // Human mode: simple sprite movement
+    if (this.route === "human" && this.humanSprite) {
+      this.setPosition(this.targetX, this.targetY);
+      // Rotate sprite to face movement direction
+      this.humanSprite.setRotation(angle);
+    } else {
+      // Shark mode: rope-based movement
+      /* rigid head segments (hardly bend) */
+      this.spine[0].set(x, y);
+      for (let i = 1; i < 4; i++) {
+        this.spine[i].set(
+          this.spine[i - 1].x - Math.cos(angle) * BASE_SPACING,
+          this.spine[i - 1].y - Math.sin(angle) * BASE_SPACING,
+        );
       }
 
-      const prog = i / (SEGMENT_COUNT - 1);
-      const wave = this.waveAt(prog, t, i);
-      const norm = sa + Math.PI / 2;
+      /* trailing segments follow like a rope */
+      for (let i = 4; i < SEGMENT_COUNT; i++) {
+        const prev = this.spine[i - 1];
+        const curr = this.spine[i];
+        const dist = Phaser.Math.Distance.BetweenPoints(prev, curr);
+        if (dist > BASE_SPACING) {
+          const a = Phaser.Math.Angle.BetweenPoints(curr, prev);
+          curr.x = prev.x - Math.cos(a) * BASE_SPACING;
+          curr.y = prev.y - Math.sin(a) * BASE_SPACING;
+        }
+      }
 
-      // Convert to local coordinates within the container
-      const lx = sp.x + Math.cos(norm) * wave - this.targetX;
-      const ly = sp.y + Math.sin(norm) * wave - this.targetY;
-      
-      pts.push(new Phaser.Math.Vector2(lx, ly));
+      /* compute display points (spine + wave offset) */
+      const pts: Phaser.Math.Vector2[] = [];
+
+      // Our image is facing RIGHT. Tail is at left (x=0), Head is at right (x=width).
+      // Rope with horizontal=true maps texture x=0 to pts[0], and x=width to pts[length-1].
+      // So pts[0] MUST be the TAIL, and pts[23] MUST be the HEAD.
+      // spine[0] is HEAD. spine[23] is TAIL.
+      for (let i = SEGMENT_COUNT - 1; i >= 0; i--) {
+        const sp = this.spine[i];
+        let sa = this.targetAngle;
+        if (i > 0) {
+          sa = Phaser.Math.Angle.BetweenPoints(this.spine[i], this.spine[i - 1]);
+        }
+
+        const prog = i / (SEGMENT_COUNT - 1);
+        const wave = this.waveAt(prog, t, i);
+        const norm = sa + Math.PI / 2;
+
+        // Convert to local coordinates within the container
+        const lx = sp.x + Math.cos(norm) * wave - this.targetX;
+        const ly = sp.y + Math.sin(norm) * wave - this.targetY;
+
+        pts.push(new Phaser.Math.Vector2(lx, ly));
+      }
+
+      this.rope.setPoints(pts);
+
+      this.setPosition(this.targetX, this.targetY);
     }
-
-    this.rope.setPoints(pts);
-
-    this.setPosition(this.targetX, this.targetY);
 
     // Determine if this territory should be shown and what color
     const isOwn = this.isSelf;
@@ -227,6 +248,9 @@ export class Shark extends Phaser.GameObjects.Container {
   }
 
   override destroy(fromScene?: boolean): void {
+    if (this.humanSprite) {
+      this.humanSprite.destroy();
+    }
     this.territoryRenderer.destroy();
     super.destroy(fromScene);
   }

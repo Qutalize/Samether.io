@@ -114,7 +114,7 @@ export class HomeScreen extends Phaser.Scene {
       { id: "attack", label: "攻撃系\n(シュモクザメ)", color: "#ff6666" },
       { id: "non-attack", label: "非攻撃系\n(ドチザメ)", color: "#66ccff" },
       { id: "deep-sea", label: "深海魚系\n(コビトザメ)", color: "#bb66ff" },
-      { id: "human", label: "？\n(人間)", color: "#ffcc88" },
+      { id: "human", label: "？", color: "#ffcc88" },
     ];
 
     this.routeButtons = routes.map((route) =>
