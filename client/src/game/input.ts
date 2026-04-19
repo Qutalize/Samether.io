@@ -16,10 +16,20 @@ export class InputController {
   private static readonly CP_RECOVER_RATE = 10; // units per second
   private static readonly CP_CONSUME_RATE = 50; // units per second
 
+  /* タップダッシュ定数 */
+  private static readonly TAP_THRESHOLD_MS = 200;    // この時間以内の入力をタップと判定
+  private static readonly TAP_DASH_DURATION_MS = 300; // タップ後にダッシュを維持する時間
+
   /* CP state */
   private cp = InputController.CP_MAX;
   private isCpEmpty = false;
   private isExhausted = false;
+
+  /* タップダッシュ状態 */
+  /** ポインターが押下された時刻（ミリ秒）。タップ判定に使用。 */
+  private pointerDownTime = 0;
+  /** タップダッシュが有効な期限タイムスタンプ（ミリ秒）。この時刻までダッシュを維持する。 */
+  private tapDashUntil = 0;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -67,10 +77,17 @@ export class InputController {
     );
 
     c.on("pointerdown", () => {
+      this.pointerDownTime = Date.now();
       this.dashPressed = true;
       this.updateVisualState();
     });
     const resetStyle = () => {
+      const heldMs = Date.now() - this.pointerDownTime;
+      this.pointerDownTime = 0;
+      if (heldMs < InputController.TAP_THRESHOLD_MS) {
+        // タップ（短い押下）と判定 → ダッシュをTAP_DASH_DURATION_MS継続
+        this.tapDashUntil = Date.now() + InputController.TAP_DASH_DURATION_MS;
+      }
       this.dashPressed = false;
       this.updateVisualState();
     };
@@ -105,7 +122,8 @@ export class InputController {
   }
 
   private isDashInputActive(): boolean {
-    return this.dashPressed || (this.spaceKey && this.spaceKey.isDown);
+    const tapActive = Date.now() < this.tapDashUntil;
+    return this.dashPressed || tapActive || (this.spaceKey && this.spaceKey.isDown);
   }
 
   /** Returns the visual dash button container so it can be added to the UI layer */
