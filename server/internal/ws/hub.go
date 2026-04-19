@@ -197,6 +197,18 @@ func randomBotRoute() string {
 	return routes[rand.Intn(len(routes))]
 }
 
+// cpRateMultiplier はルートに応じたCP消費率係数を返す。
+func cpRateMultiplier(route string) float64 {
+	switch route {
+	case game.RouteAttack:
+		return game.AttackCPRateMult
+	case game.RouteNonAttack:
+		return game.NonAttackCPRateMult
+	default:
+		return 1.0
+	}
+}
+
 // 新送信関数（Payload対応）
 func (h *Hub) send(c *Client, typ string, payload any) {
 	b := MustMarshal(typ, payload)
@@ -304,6 +316,12 @@ func (h *Hub) handleInbound(m inboundMsg) {
 			s := game.NewShark(id, p.Name, randomSpawn())
 			s.Route = game.NormalizeRoute(p.Route)
 			h.world.Sharks[id] = s
+
+			// CP消費率をルートに応じて設定
+			if h.cpHandler != nil {
+				cpMult := cpRateMultiplier(s.Route)
+				h.cpHandler.SetRouteMult(id, cpMult)
+			}
 		}
 
 		h.send(m.client, "welcome", WelcomePayload{
@@ -332,8 +350,15 @@ func (h *Hub) handleInbound(m inboundMsg) {
 		}
 
 		s.TargetAngle = p.Angle
-		if p.Dash {
-			s.DashUntilTick = h.world.Tick + int64(float64(game.TickHz)*game.DashDurationSec)
+		if p.Dash && h.world.Tick >= s.DashCooldownUntilTick {
+			dashDuration := int64(float64(game.TickHz) * game.DashDurationSec)
+			s.DashUntilTick = h.world.Tick + dashDuration
+			// 攻撃種: ダッシュクールダウン -30%（短縮）
+			cooldownTicks := int64(float64(dashDuration) * game.AttackDashCooldownMult)
+			if s.Route != game.RouteAttack {
+				cooldownTicks = dashDuration
+			}
+			s.DashCooldownUntilTick = h.world.Tick + dashDuration + cooldownTicks
 		}
 
 		if s.TrailActive && !p.Draw {
@@ -408,6 +433,7 @@ func (h *Hub) step(dt float64) {
 		if !s.Alive {
 			continue
 		}
+		s.CurrentTick = h.world.Tick
 		dash := h.world.Tick <= s.DashUntilTick
 		s.Move(dt, dash)
 	}
@@ -425,6 +451,9 @@ func (h *Hub) step(dt float64) {
 			game.AssignTraitToShark(s)
 		}
 	}
+
+	// ルート別特性エフェクト（ハンガーペナルティ、透明化など）
+	h.world.ApplyRouteEffects()
 
 	allDead := make(map[string]struct{}, len(wallDead)+len(territoryDead)+len(sharkDead))
 	for _, id := range wallDead {
@@ -581,6 +610,23 @@ func shouldSendShark(self, other *game.Shark, radius float64) bool {
 	return false
 }
 
+// canSeeShark は viewer が target を視認できるかを返す。
+// 深海種の透明化中は、自分自身と深海種プレイヤー以外には見えない。
+func canSeeShark(viewer, target *game.Shark) bool {
+	if !target.IsStealthy {
+		return true
+	}
+	// 自分自身は常に見える
+	if viewer.ID == target.ID {
+		return true
+	}
+	// 深海種プレイヤーは他の透明化サメも視認できる
+	if viewer.Route == game.RouteDeepSea {
+		return true
+	}
+	return false
+}
+
 func (h *Hub) sendStateTo(c *Client) {
 	self := h.world.Sharks[c.playerID]
 
@@ -603,11 +649,18 @@ func (h *Hub) sendStateTo(c *Client) {
 	if self.Stage == 4 {
 		radius = game.VisibilityStage5
 	}
+	// 深海種は視界 +40%
+	if self.Route == game.RouteDeepSea {
+		radius *= game.DeepSeaVisionMult
+	}
 
 	currentSharkMap := make(map[string]StateSharkView, 8)
 	currentSharks := make([]StateSharkView, 0, 8)
 	for _, s := range h.world.Sharks {
 		if !s.Alive || !shouldSendShark(self, s, radius) {
+			continue
+		}
+		if !canSeeShark(self, s) {
 			continue
 		}
 		territories := make([][]Point, 0, len(s.Territories))

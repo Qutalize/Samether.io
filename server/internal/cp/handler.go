@@ -58,6 +58,7 @@ type Handler struct {
 	sessions   map[string]*CPSession // playerID -> session
 	cooldowns  map[string]time.Time  // playerID -> last session end time
 	resultChan chan CPResultMsg       // async results from goroutines -> Hub
+	routeMults map[string]float64    // playerID -> CP消費率係数
 }
 
 // NewHandler creates a new CP handler.
@@ -68,7 +69,28 @@ func NewHandler(tracker *TrackerClient, store CPStore) *Handler {
 		sessions:   make(map[string]*CPSession),
 		cooldowns:  make(map[string]time.Time),
 		resultChan: make(chan CPResultMsg, 64),
+		routeMults: make(map[string]float64),
 	}
+}
+
+// SetRouteMult はプレイヤーのルート別CP消費率係数を設定する。
+// hub.go から join 時に呼ぶ。
+func (h *Handler) SetRouteMult(playerID string, mult float64) {
+	h.routeMults[playerID] = mult
+}
+
+// applyRouteToEarned はルート係数を適用した CP 獲得量を返す。
+func (h *Handler) applyRouteToEarned(playerID string, dist float64) int {
+	raw := CalcEarned(dist)
+	return int(float64(raw) * h.routeMultFor(playerID))
+}
+
+// routeMultFor はプレイヤーのCP消費率係数を返す（未設定なら 1.0）。
+func (h *Handler) routeMultFor(playerID string) float64 {
+	if m, ok := h.routeMults[playerID]; ok {
+		return m
+	}
+	return 1.0
 }
 
 // ResultChan returns the channel for async results (Hub reads from this).
@@ -190,7 +212,7 @@ func (h *Handler) fetchHistoryAndFinalize(playerID string, sess *CPSession) {
 	}
 
 	dist := CalcTotalDistance(positions)
-	earned := CalcEarned(dist)
+	earned := h.applyRouteToEarned(playerID, dist)
 	total, err := h.store.AddCP(playerID, earned)
 	if err != nil {
 		log.Printf("cp store AddCP error: %v", err)
@@ -217,7 +239,7 @@ func (h *Handler) fetchHistoryAndFinalize(playerID string, sess *CPSession) {
 
 func (h *Handler) finalizeFromLocal(playerID string, sess *CPSession) (string, any) {
 	dist := CalcTotalDistance(sess.Positions)
-	earned := CalcEarned(dist)
+	earned := h.applyRouteToEarned(playerID, dist)
 	total, err := h.store.AddCP(playerID, earned)
 	if err != nil {
 		log.Printf("cp store AddCP error: %v", err)
@@ -270,10 +292,12 @@ func (h *Handler) HasSession(playerID string) bool {
 func (h *Handler) RemovePlayer(playerID string) *CPResultMsg {
 	sess, ok := h.sessions[playerID]
 	if !ok {
+		delete(h.routeMults, playerID)
 		return nil
 	}
 	sess.Active = false
 	delete(h.sessions, playerID)
+	delete(h.routeMults, playerID)
 	h.cooldowns[playerID] = time.Now()
 	msgType, payload := h.finalizeFromLocal(playerID, sess)
 	if msgType != "" {

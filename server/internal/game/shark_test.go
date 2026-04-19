@@ -7,7 +7,8 @@ import (
 
 func TestSharkMoveStraight(t *testing.T) {
 	s := NewShark("p1", "alice", Vec{X: 100, Y: 100})
-	s.Angle = 0 // +X direction
+	s.Route = RouteNonAttack // 速度補正なし（基準テスト）
+	s.Angle = 0              // +X direction
 
 	dt := 1.0 / float64(TickHz) // one tick
 	s.Move(dt, false)
@@ -45,6 +46,7 @@ func TestSharkSegmentsFollow(t *testing.T) {
 
 func TestSharkDash(t *testing.T) {
 	s := NewShark("p1", "alice", Vec{X: 0, Y: 0})
+	s.Route = RouteNonAttack // 速度補正なし（基準テスト）
 	s.Angle = 0
 
 	dt := 1.0 / float64(TickHz)

@@ -238,6 +238,11 @@ func (w *World) ConsumeFoods() []string {
 
 			if trait.CanConsume(s, f) {
 				s.XP++
+				// 攻撃種: 餌を食べた時刻を記録（ハンガーペナルティリセット）
+				if s.Route == RouteAttack {
+					s.LastFoodTick = w.Tick
+					s.HungerNextPenaltyTick = 0
+				}
 				eaten = append(eaten, fid)
 				delete(w.Foods, fid)
 				break

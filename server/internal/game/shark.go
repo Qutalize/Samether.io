@@ -40,6 +40,16 @@ type Shark struct {
 	AbandonedFoodID    string
 	AbandonedUntilTick int64
 	Trait              Trait // 特性（nil = DefaultTrait）
+
+	// ルート別特性フィールド
+	CurrentTick           int64 // 現在Tick（Moveから参照するためhubがセット）
+	LastFoodTick          int64 // 最後に餌を食べたTick（攻撃種ハンガーペナルティ用）
+	HungerNextPenaltyTick int64 // 次のXPペナルティ適用Tick
+	LastMoveCheckHead     Vec   // 前回静止チェック時の位置（深海種透明化用）
+	StillSinceTick        int64 // 静止開始Tick（深海種透明化用）
+	IsStealthy            bool  // 透明状態（深海種）
+	EscapeBoostUntilTick  int64 // 逃走ボーナス終了Tick（非攻撃種）
+	DashCooldownUntilTick int64 // ダッシュクールダウン終了Tick
 }
 
 func NewShark(id, name string, spawn Vec) *Shark {
@@ -54,6 +64,9 @@ func NewShark(id, name string, spawn Vec) *Shark {
 		Stage:       0,
 		Alive:       true,
 		Trail:       []Vec{spawn},
+		LastFoodTick:      0,
+		StillSinceTick:    0,
+		LastMoveCheckHead: spawn,
 	}
 	s.Segments = make([]Vec, Stages[0].SegmentCount)
 	for i := range s.Segments {
@@ -65,6 +78,31 @@ func NewShark(id, name string, spawn Vec) *Shark {
 // SizeScale returns the current visual/collision size multiplier.
 func (s *Shark) SizeScale() float64 {
 	return Stages[s.Stage].SizeScale
+}
+
+// RouteSpeedMult returns the effective speed multiplier for this shark
+// based on its route, stage and current position.
+func (s *Shark) RouteSpeedMult() float64 {
+	mult := 1.0
+	switch s.Route {
+	case RouteAttack:
+		mult += AttackSpeedBonus
+	case RouteNonAttack:
+		// 逃走ボーナス中は速度 +30%
+		if s.CurrentTick > 0 && s.CurrentTick <= s.EscapeBoostUntilTick {
+			mult += NonAttackEscapeSpeedBonus
+		}
+	case RouteDeepSea:
+		// レベル1–2（Stage 0–1）は速度 -20%
+		if s.Stage <= 1 {
+			mult *= DeepSeaLowStageSpeedMult
+		}
+		// 深度ボーナス: 画面下半分（Y > WorldHeight/2）で速度 +10%
+		if s.Head.Y > DeepSeaDepthThreshold {
+			mult += DeepSeaDepthSpeedBonus
+		}
+	}
+	return mult
 }
 
 // Move advances the shark by one tick.
@@ -100,7 +138,7 @@ func (s *Shark) Move(dt float64, dash bool) {
 	}
 
 	// 2. Move forward
-	speed := BaseSpeed
+	speed := BaseSpeed * s.RouteSpeedMult()
 	if dash {
 		speed *= DashMultiplier
 	}

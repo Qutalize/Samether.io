@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { HudComponent } from "./HudComponent";
+import type { SharkRoute } from "../../network/protocol";
 
 const RADAR_R = 90;
 const RADAR_RANGE = 1400;
@@ -12,9 +13,16 @@ export interface RadarBlip {
   y: number;
 }
 
+export interface RadarFood {
+  x: number;
+  y: number;
+  isRed?: boolean;
+}
+
 export class RadarRenderer implements HudComponent {
   private gfx: Phaser.GameObjects.Graphics;
   private scaleManager: Phaser.Scale.ScaleManager;
+  private myRoute: SharkRoute;
 
   private sweep = 0;
   private myId = "";
@@ -22,9 +30,10 @@ export class RadarRenderer implements HudComponent {
   private myY = 0;
   private myAngle = 0;
   private sharks: RadarBlip[] = [];
-  private foods: { x: number; y: number }[] = [];
+  private foods: RadarFood[] = [];
 
-  constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
+  constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container, myRoute: SharkRoute) {
+    this.myRoute = myRoute;
     this.scaleManager = scene.scale;
     this.gfx = scene.add.graphics();
     container.add(this.gfx);
@@ -37,7 +46,7 @@ export class RadarRenderer implements HudComponent {
     myY: number,
     myAngle: number,
     sharks: RadarBlip[],
-    foods: { x: number; y: number }[],
+    foods: RadarFood[],
   ): void {
     this.myId = myId;
     this.myX = myX;
@@ -106,28 +115,52 @@ export class RadarRenderer implements HudComponent {
 
     const s = r / RADAR_RANGE;
 
-    /* food dots (tiny green) */
-    g.fillStyle(0x44ee88, 0.65);
+    /* ルート別の食べ物・敵表示 */
     for (const f of this.foods) {
       const dx = (f.x - this.myX) * s;
       const dy = (f.y - this.myY) * s;
-      if (dx * dx + dy * dy < (r - 2) * (r - 2)) {
+      if (dx * dx + dy * dy >= (r - 2) * (r - 2)) continue;
+
+      if (this.myRoute === "attack") {
+        // 攻撃種: 赤い餌（死体）は明るく、通常餌は薄く
+        if (f.isRed) {
+          g.fillStyle(0xff4444, 0.85);
+          g.fillCircle(cx + dx, cy + dy, 2.5);
+        } else {
+          g.fillStyle(0x44ee88, 0.25);
+          g.fillCircle(cx + dx, cy + dy, 1.5);
+        }
+      } else if (this.myRoute === "non-attack") {
+        // 非攻撃種: 通常餌（緑）のみ明るく、赤い餌は薄く
+        if (!f.isRed) {
+          g.fillStyle(0x44ee88, 0.85);
+          g.fillCircle(cx + dx, cy + dy, 2.5);
+        } else {
+          g.fillStyle(0xff4444, 0.20);
+          g.fillCircle(cx + dx, cy + dy, 1.5);
+        }
+      } else {
+        // 深海種: 全種類の餌を薄く表示
+        g.fillStyle(f.isRed ? 0xff8888 : 0x44ee88, 0.25);
         g.fillCircle(cx + dx, cy + dy, 1.5);
       }
     }
 
-    /* shark blips (red with glow) */
+    /* 敵サメブリップ */
     for (const sh of this.sharks) {
       if (sh.id === this.myId) continue;
       const dx = (sh.x - this.myX) * s;
       const dy = (sh.y - this.myY) * s;
       const d2 = dx * dx + dy * dy;
-      if (d2 < (r - 4) * (r - 4)) {
-        g.fillStyle(0xff4444, 0.2);
-        g.fillCircle(cx + dx, cy + dy, 5);
-        g.fillStyle(0xff4444, 0.8);
-        g.fillCircle(cx + dx, cy + dy, 2.5);
-      }
+      if (d2 >= (r - 4) * (r - 4)) continue;
+
+      // 攻撃種: 敵を明るく表示 / 非攻撃・深海種: 薄く表示
+      const alpha = this.myRoute === "attack" ? 0.85 : 0.35;
+      const glowAlpha = this.myRoute === "attack" ? 0.25 : 0.10;
+      g.fillStyle(0xff4444, glowAlpha);
+      g.fillCircle(cx + dx, cy + dy, 5);
+      g.fillStyle(0xff4444, alpha);
+      g.fillCircle(cx + dx, cy + dy, 2.5);
     }
 
     /* player direction arrow (center) */

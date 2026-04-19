@@ -23,6 +23,8 @@ import { getRouteColor } from "../config/RouteColors";
 
 /* ── constants ─────────────────────────────────────────────── */
 const STAGE_ZOOMS = [1.0, 0.82, 0.65, 0.48, 0.35];
+// 深海種の視界拡張係数（+40% → カメラをより広く）
+const DEEPSEA_VISION_MULT = 1.40;
 
 const ENABLE_TRAIL_ON_HOLD = true;
 const TRAIL_POINT_SPACING = 12;
@@ -161,7 +163,7 @@ export class GameScene extends Phaser.Scene {
     /* ── HUD ────────────────── */
     this.xpBar = new XpBar(this, this.uiContainer, this.myRoute);
     this.leaderboardPanel = new LeaderboardPanel(this, this.uiContainer);
-    this.radarRenderer = new RadarRenderer(this, this.uiContainer);
+    this.radarRenderer = new RadarRenderer(this, this.uiContainer, this.myRoute);
 
     /* ── Territory System ────────────────── */
     this.territoryManager = new TerritoryManager(this, this.myRoute);
@@ -551,7 +553,9 @@ export class GameScene extends Phaser.Scene {
       }
 
       this.cameras.main.centerOn(m.you.x, m.you.y);
-      const zoom = STAGE_ZOOMS[m.you.stage] ?? 1;
+      const baseZoom = STAGE_ZOOMS[m.you.stage] ?? 1;
+      // 深海種は視界 +40%（カメラをさらにズームアウト）
+      const zoom = this.myRoute === "deep-sea" ? baseZoom / DEEPSEA_VISION_MULT : baseZoom;
       this.cameras.main.setZoom(zoom);
 
       /* update radar blips */
@@ -564,7 +568,7 @@ export class GameScene extends Phaser.Scene {
         m.you.y,
         mySv?.angle ?? 0,
         Array.from(sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y })),
-        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y })),
+        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y, isRed: fv.isRed })),
       );
 
       /* XP bar */
