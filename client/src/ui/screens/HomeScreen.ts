@@ -115,6 +115,7 @@ export class HomeScreen extends Phaser.Scene {
       { id: "attack", label: "攻撃系\n(シュモクザメ)", color: "#ff6666" },
       { id: "non-attack", label: "非攻撃系\n(ドチザメ)", color: "#66ccff" },
       { id: "deep-sea", label: "深海魚系\n(コビトザメ)", color: "#bb66ff" },
+      { id: "human", label: "？", color: "#ffcc88" },
     ];
 
     this.routeButtons = routes.map((route) =>
@@ -140,9 +141,9 @@ export class HomeScreen extends Phaser.Scene {
   }
 
   private layoutRouteButtons(centerX: number, y: number): void {
-    const spacing = Math.min(160, this.scale.width * 0.28);
+    const spacing = Math.min(140, this.scale.width * 0.24);
     this.routeButtons.forEach((btn, index) => {
-      btn.setPosition(centerX + (index - 1) * spacing, y);
+      btn.setPosition(centerX + (index - 1.5) * spacing, y);
     });
   }
 

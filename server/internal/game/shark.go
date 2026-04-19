@@ -7,13 +7,14 @@ const (
 	RouteAttack    = "attack"
 	RouteNonAttack = "non-attack"
 	RouteDeepSea   = "deep-sea"
+	RouteHuman     = "human"
 )
 
 // NormalizeRoute returns a valid route, falling back to RouteAttack for
 // unknown or empty inputs.
 func NormalizeRoute(r string) string {
 	switch r {
-	case RouteAttack, RouteNonAttack, RouteDeepSea:
+	case RouteAttack, RouteNonAttack, RouteDeepSea, RouteHuman:
 		return r
 	default:
 		return RouteAttack
@@ -102,6 +103,10 @@ func (s *Shark) Move(dt float64, dash bool) {
 
 	// 2. Move forward
 	speed := BaseSpeed
+	// Human mode is slower
+	if s.Route == RouteHuman {
+		speed *= 0.4 // 40% of normal speed
+	}
 	if dash {
 		speed *= DashMultiplier
 	}
@@ -141,6 +146,10 @@ func (s *Shark) Move(dt float64, dash bool) {
 // extends the segments array, keeping existing segment positions.
 // Safe to call every tick — does nothing if stage is unchanged.
 func (s *Shark) UpdateStage() {
+	// Humans don't evolve
+	if s.Route == RouteHuman {
+		return
+	}
 	newStage := StageFromXP(s.XP)
 	if newStage == s.Stage {
 		return
