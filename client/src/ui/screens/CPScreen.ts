@@ -360,7 +360,7 @@ export class CPScreen extends Phaser.Scene {
       sources: {
         osm: {
           type: "raster",
-          tiles: ["https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"],
+          tiles: ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"],
           tileSize: 256,
           attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
         },
@@ -376,7 +376,7 @@ export class CPScreen extends Phaser.Scene {
         const data: { region: string; apiKey: string } = await res.json();
         if (data.apiKey && data.region) {
           // Maps API v2: /v2/styles/{StyleName}/descriptor
-          const awsUrl = `https://maps.geo.${data.region}.amazonaws.com/v2/styles/Standard/descriptor?color-scheme=Light&language=ja&key=${data.apiKey}`;
+          const awsUrl = `https://maps.geo.${data.region}.amazonaws.com/v2/styles/Standard/descriptor?color-scheme=Dark&language=ja&key=${data.apiKey}`;
           const check = await fetch(awsUrl);
           if (check.ok) {
             style = awsUrl;
