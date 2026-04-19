@@ -21,6 +21,7 @@ type Client struct {
 	conn     *websocket.Conn
 	send     chan []byte // outbound frames
 	playerID string      // set after join; empty while not playing
+	cpOnly   bool        // true when joined only for CP tracking (no shark spawned)
 
 	lastStateTick int64
 	lastSharks map[string]StateSharkView
@@ -50,7 +51,7 @@ func (c *Client) readPump() {
 			return
 		}
 
-		// 新プロトコルで type を取得
+		// 新プロトコルで type 取得
 		typ, _, err := DecodeMessage(raw)
 		if err != nil {
 			continue

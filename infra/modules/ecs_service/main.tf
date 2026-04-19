@@ -46,6 +46,14 @@ resource "aws_ecs_task_definition" "this" {
           value = var.location_tracker_name
         },
         {
+          name  = "LOCATION_MAP_NAME"
+          value = var.location_map_name
+        },
+        {
+          name  = "LOCATION_MAP_API_KEY"
+          value = var.location_map_api_key
+        },
+        {
           name  = "ALLOWED_ORIGIN"
           value = var.allowed_origin
         }

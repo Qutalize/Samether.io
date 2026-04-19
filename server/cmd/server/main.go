@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -19,13 +21,16 @@ func main() {
 	cfg := config.Load()
 
 	hub := sws.NewHub(sws.Config{
-		RoomID:        cfg.RoomID,
-		RoomCapacity:  cfg.RoomCapacity,
-		InstanceID:    cfg.InstanceID,
-		RedisAddr:     cfg.RedisAddr,
-		RedisPassword: cfg.RedisPassword,
-		RedisDB:       cfg.RedisDB,
-		RedisPrefix:   cfg.RedisPrefix,
+		RoomID:              cfg.RoomID,
+		RoomCapacity:        cfg.RoomCapacity,
+		InstanceID:          cfg.InstanceID,
+		RedisAddr:           cfg.RedisAddr,
+		RedisPassword:       cfg.RedisPassword,
+		RedisDB:             cfg.RedisDB,
+		RedisPrefix:         cfg.RedisPrefix,
+		LocationTrackerName: cfg.LocationTrackerName,
+		LocationMapAPIKey:   cfg.LocationMapAPIKey,
+		AWSRegion:           cfg.AWSRegion,
 	})
 	go hub.Run()
 
@@ -60,6 +65,26 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(sws.MustMarshal("room", hub.RoomSnapshot()))
+	})
+
+	// Map API key endpoint for client MapLibre GL JS
+	mux.HandleFunc("/api/map-key", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		origin := r.Header.Get("Origin")
+		if !isAllowedOrigin(origin) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "private, max-age=300")
+		resp, _ := json.Marshal(map[string]string{
+			"region": cfg.AWSRegion,
+			"apiKey": cfg.LocationMapAPIKey,
+		})
+		_, _ = w.Write(resp)
 	})
 
 	// WebSocket endpoint
@@ -115,8 +140,14 @@ func securityMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// isAllowedOrigin checks if the origin is allowed for CORS
+// isAllowedOrigin checks if the origin is allowed for CORS.
+// An empty origin (same-origin / non-browser request served behind a reverse proxy) is allowed.
 func isAllowedOrigin(origin string) bool {
+	// Same-origin requests (no Origin header) are allowed
+	if origin == "" {
+		return true
+	}
+
 	// Allow localhost for development
 	if strings.HasPrefix(origin, "http://localhost:") ||
 		strings.HasPrefix(origin, "http://127.0.0.1:") ||
@@ -124,15 +155,14 @@ func isAllowedOrigin(origin string) bool {
 		return true
 	}
 
-	// TODO: Add production domains from environment variable
-	// allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
-	// if allowedOrigins != "" {
-	//     for _, allowed := range strings.Split(allowedOrigins, ",") {
-	//         if origin == strings.TrimSpace(allowed) {
-	//             return true
-	//         }
-	//     }
-	// }
+	// Production domains from environment variable (comma-separated)
+	if allowedOrigins := os.Getenv("ALLOWED_ORIGINS"); allowedOrigins != "" {
+		for _, allowed := range strings.Split(allowedOrigins, ",") {
+			if origin == strings.TrimSpace(allowed) {
+				return true
+			}
+		}
+	}
 
 	return false
 }
