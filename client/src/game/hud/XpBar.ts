@@ -8,6 +8,7 @@ const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
   "attack": ["シュモクザメ", "イタチザメ", "アオザメ", "ホオジロザメ", "メガロドン"],
   "non-attack": ["ドチザメ", "ネムリブカ", "シロワニ", "ウバザメ", "ジンベエザメ"],
   "deep-sea": ["ツラナガコビトザメ", "ノコギリザメ", "ラブカ", "ミツクリザメ", "ニシオンデンザメ"],
+  "human": ["人間", "人間", "人間", "人間", "人間"], // Humans don't evolve
 };
 
 export class XpBar implements HudComponent {
@@ -49,11 +50,10 @@ export class XpBar implements HudComponent {
 
     this.drawBar(xp, threshold);
     this.scoreText.setText(isMax ? `${xp} XP` : `${xp} / ${threshold} XP`);
-    this.stageText.setText(
-      ROUTE_STAGE_NAMES[route][
-        Math.min(stage, ROUTE_STAGE_NAMES[route].length - 1)
-      ],
-    );
+    const stageName = ROUTE_STAGE_NAMES[route][
+      Math.min(stage, ROUTE_STAGE_NAMES[route].length - 1)
+    ];
+    this.stageText.setText(`${stageName} (Lv.${stage + 1})`);
   }
 
   private drawBar(xp: number, threshold: number): void {

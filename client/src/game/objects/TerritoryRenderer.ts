@@ -7,6 +7,7 @@ const ROUTE_HIGHLIGHT_COLORS: Record<SharkRoute, number> = {
   attack: 0xff6666,
   "non-attack": 0x66ccff,
   "deep-sea": 0xbb66ff,
+  human: 0xffcc88, // Orange/Peach for humans
 };
 
 export class TerritoryRenderer {
