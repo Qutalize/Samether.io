@@ -514,16 +514,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (m.you) {
-      if (this.myStage !== -1 && m.you.stage > this.myStage) {
+      const previousStage = this.myStage;
+
+      if (previousStage !== -1 && m.you.stage > previousStage) {
         this.cameras.main.flash(350, 255, 255, 255, false);
         const mySv = this.gameState.getSharks().get(this.myId);
         mySv?.playEvolutionPulse();
-      }
-
-      // Update territory filtering when level changes
-      if (this.myStage !== m.you.stage) {
-        this.myStage = m.you.stage;
-        this.gameState.setMyLevel(m.you.stage);
       }
 
       this.cameras.main.centerOn(m.you.x, m.you.y);
@@ -546,30 +542,20 @@ export class GameScene extends Phaser.Scene {
       /* XP bar */
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
 
-      /* Update territory manager with current level (only when level changes) */
-      if (this.territoryManager && m.you.stage !== undefined) {
-        const previousLevel = this.myStage;
-        const currentLevel = m.you.stage;
-
-        // Only trigger evolution event if level actually changed
-        if (previousLevel !== currentLevel && previousLevel !== -1) {
+      /* Update territory manager and GameState when level changes */
+      if (m.you.stage !== previousStage) {
+        const newTerritoryLevel = m.you.stage + 1; // territory levels are 1-based (stage+1)
+        if (this.territoryManager) {
           this.territoryManager.handleMessage({
             type: 'my_evolution',
             payload: {
-              newLevel: currentLevel,
-              recalculateTerritories: true,
-            },
-          });
-        } else if (previousLevel === -1) {
-          // First initialization
-          this.territoryManager.handleMessage({
-            type: 'my_evolution',
-            payload: {
-              newLevel: currentLevel,
-              recalculateTerritories: false,
+              newLevel: newTerritoryLevel,
+              recalculateTerritories: previousStage !== -1,
             },
           });
         }
+        this.gameState.setMyLevel(m.you.stage);
+        this.myStage = m.you.stage;
       }
     }
   }
