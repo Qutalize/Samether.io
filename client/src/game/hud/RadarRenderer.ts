@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { HudComponent } from "./HudComponent";
+import type { SharkRoute } from "../../network/protocol";
 
 const RADAR_R = 90;
 const RADAR_RANGE = 1400;
@@ -21,8 +22,9 @@ export class RadarRenderer implements HudComponent {
   private myX = 0;
   private myY = 0;
   private myAngle = 0;
+  private myRoute: SharkRoute = "attack";
   private sharks: RadarBlip[] = [];
-  private foods: { x: number; y: number }[] = [];
+  private foods: { x: number; y: number; isRed?: boolean }[] = [];
 
   constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
     this.scaleManager = scene.scale;
@@ -36,13 +38,15 @@ export class RadarRenderer implements HudComponent {
     myX: number,
     myY: number,
     myAngle: number,
+    myRoute: SharkRoute,
     sharks: RadarBlip[],
-    foods: { x: number; y: number }[],
+    foods: { x: number; y: number; isRed?: boolean }[],
   ): void {
     this.myId = myId;
     this.myX = myX;
     this.myY = myY;
     this.myAngle = myAngle;
+    this.myRoute = myRoute;
     this.sharks = sharks;
     this.foods = foods;
   }
@@ -106,13 +110,22 @@ export class RadarRenderer implements HudComponent {
 
     const s = r / RADAR_RANGE;
 
-    /* food dots (tiny green) */
-    g.fillStyle(0x44ee88, 0.65);
+    /* food dots */
     for (const f of this.foods) {
       const dx = (f.x - this.myX) * s;
       const dy = (f.y - this.myY) * s;
       if (dx * dx + dy * dy < (r - 2) * (r - 2)) {
-        g.fillCircle(cx + dx, cy + dy, 1.5);
+        if (f.isRed) {
+          /* red food: only visible to attack sharks */
+          if (this.myRoute === "attack") {
+            g.fillStyle(0xff4444, 0.65);
+            g.fillCircle(cx + dx, cy + dy, 1.5);
+          }
+        } else {
+          /* normal food: green dot */
+          g.fillStyle(0x44ee88, 0.65);
+          g.fillCircle(cx + dx, cy + dy, 1.5);
+        }
       }
     }
 
@@ -130,7 +143,7 @@ export class RadarRenderer implements HudComponent {
       }
     }
 
-    /* player direction arrow (center) */
+    /* player direction arrow (center) - points in shark's movement direction */
     const a = this.myAngle;
     const al = 10;
     const aw = 6;

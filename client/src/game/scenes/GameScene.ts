@@ -563,14 +563,25 @@ export class GameScene extends Phaser.Scene {
       /* update radar blips */
       const sharks = this.gameState.getSharks();
       const foods = this.gameState.getFoods();
-      const mySv = sharks.get(this.myId);
+
+      // Find self in server data for angle
+      let myAngle = 0;
+      const allSharks = m.full ? m.sharks : m.updatedSharks;
+      const mySelf = allSharks?.find(s => s.id === this.myId);
+      if (mySelf) {
+        myAngle = mySelf.angle;
+      }
+
       this.radarRenderer.setBlips(
         this.myId,
         m.you.x,
         m.you.y,
-        mySv?.angle ?? 0,
-        Array.from(sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y })),
-        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y })),
+        myAngle,
+        this.myRoute,
+        this.myRoute === "attack"
+          ? Array.from(sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y }))
+          : [], // non-attack sharks don't see other sharks on radar
+        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y, isRed: fv.isRed })),
       );
 
       /* XP bar */
