@@ -107,6 +107,11 @@ func (w *World) CheckTerritoryViolations() []string {
 			if otherID == id || !other.Alive {
 				continue
 			}
+			// Safe if same route (same species)
+			if other.Route == self.Route {
+				continue
+			}
+			// Safe if equal or lower level
 			if other.Stage <= self.Stage {
 				continue
 			}

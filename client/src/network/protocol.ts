@@ -38,8 +38,9 @@ export interface StateSharkView {
   y: number;
   angle: number;
   stage: number;
-  route?: SharkRoute; // TODO: Server-side support is pending. Not populated from the server; client uses fallback.
+  route?: SharkRoute;
   territories?: Point[][];
+  boosted?: boolean;
 }
 
 export interface StateFoodView {
@@ -47,6 +48,7 @@ export interface StateFoodView {
   x: number;
   y: number;
   isRed?: boolean;
+  isDiver?: boolean;
 }
 
 export interface StateYou {

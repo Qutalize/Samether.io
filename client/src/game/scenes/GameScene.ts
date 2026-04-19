@@ -44,7 +44,6 @@ export class GameScene extends Phaser.Scene {
   private myId = "";
   private myName = "";
   private myRoute: SharkRoute = "attack";
-  private lastStage = -1;
   private myStage = -1;
 
   /* entity state manager */
@@ -74,6 +73,7 @@ export class GameScene extends Phaser.Scene {
   private trailGraphics!: Phaser.GameObjects.Graphics;
   private pointerTrail: Phaser.Math.Vector2[] = [];
 
+
   /* special effects */
   private suctionEffect!: SuctionEffect;
   private isWhaleShark = false; // 自分がジンベエザメか
@@ -81,6 +81,10 @@ export class GameScene extends Phaser.Scene {
   /* atmosphere */
   private bgShader!: Phaser.GameObjects.Shader;
   private vignetteOverlay!: Phaser.GameObjects.Image;
+
+  /* audio */
+  private bgm?: Phaser.Sound.BaseSound;
+  private prevXp = 0;
 
   constructor() {
     super({ key: "GameScene" });
@@ -92,13 +96,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image("shark",           "shark.png");
-    this.load.image("shark_mako",      "shark_mako.png");
-    this.load.image("shark_sandtiger", "shark_sandtiger.png");
-    this.load.image("shark_frilled",   "shark_frilled.png");
-    this.load.image("shark_megalodon", "shark_megalodon.png");
-    this.load.image("shark_whale",     "shark_whale.png");
-    this.load.image("shark_greenland", "shark_greenland.png");
+    this.load.image("shark",           "images/shark.png");
+    this.load.image("shark_mako",      "images/shark_mako.png");
+    this.load.image("shark_sandtiger", "images/shark_sandtiger.png");
+    this.load.image("shark_frilled",   "images/shark_frilled.png");
+    this.load.image("shark_megalodon", "images/shark_megalodon.png");
+    this.load.image("shark_whale",     "images/shark_whale.png");
+    this.load.image("shark_greenland", "images/shark_greenland.png");
+    this.load.image("diver",           "images/diver.png");
+    this.load.audio("bgm", "audio/bgm.mp3");
+    this.load.audio("sfx_xp_gain", "audio/sfx_xp_gain.mp3");
+    this.load.audio("sfx_levelup", "audio/sfx_levelup.mp3");
     if (!this.cache.shader.has("OceanBackground")) {
       this.cache.shader.add("OceanBackground", OceanBackgroundShader);
     }
@@ -137,6 +145,7 @@ export class GameScene extends Phaser.Scene {
 
     this.trailGraphics = this.add.graphics().setDepth(-1);
     this.worldContainer.add(this.trailGraphics);
+
 
     /* special effects */
     this.suctionEffect = new SuctionEffect(this);
@@ -198,6 +207,14 @@ export class GameScene extends Phaser.Scene {
       loop: true,
       callback: () => this.sendInput(),
     });
+
+    /* audio */
+    if (this.sound && this.cache.audio.exists("bgm")) {
+      this.bgm = this.sound.add("bgm", { loop: true, volume: 1.0 });
+      if (this.bgm) {
+        this.bgm.play();
+      }
+    }
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -215,6 +232,7 @@ export class GameScene extends Phaser.Scene {
 
     /* animate food glow */
     for (const f of this.gameState.getFoods().values()) f.tickAnim(time);
+
 
     /* radar sweep rotation */
     this.radarRenderer.tick(delta);
@@ -273,6 +291,16 @@ export class GameScene extends Phaser.Scene {
     this.createVignetteTexture(textureKey, innerRatio, outerRatio);
     if (this.vignetteOverlay?.active) {
       this.vignetteOverlay.setTexture(textureKey);
+    }
+  }
+
+  /**
+   * Stop background music.
+   * Called by DeathScreen when player dies.
+   */
+  public stopBgm(): void {
+    if (this.bgm && this.bgm.isPlaying) {
+      this.bgm.stop();
     }
   }
 
@@ -434,6 +462,7 @@ export class GameScene extends Phaser.Scene {
   /* ════════════════════════════════════════════════════════ */
   /*  WORLD BORDER                                            */
   /* ════════════════════════════════════════════════════════ */
+
   private drawWorldBorder(): void {
     this.worldBorder.clear();
     this.worldBorder.lineStyle(8, 0xff0000, 1.0);
@@ -515,12 +544,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (m.you) {
-      if (this.myStage !== -1 && m.you.stage > this.myStage) {
+      const previousStage = this.myStage;
+
+      if (previousStage !== -1 && m.you.stage > previousStage) {
+        if (this.sound && this.cache.audio.exists("sfx_levelup")) {
+          this.sound.play("sfx_levelup", { volume: 1.0 });
+        }
         this.cameras.main.flash(350, 255, 255, 255, false);
         const mySv = this.gameState.getSharks().get(this.myId);
         mySv?.playEvolutionPulse();
       }
-      this.myStage = m.you.stage;
 
       this.cameras.main.centerOn(m.you.x, m.you.y);
       const zoom = STAGE_ZOOMS[m.you.stage] ?? 1;
@@ -540,18 +573,28 @@ export class GameScene extends Phaser.Scene {
       );
 
       /* XP bar */
+      if (m.you.xp > this.prevXp) {
+        if (this.sound && this.cache.audio.exists("sfx_xp_gain")) {
+          this.sound.play("sfx_xp_gain", { volume: 1.0 });
+        }
+        this.prevXp = m.you.xp;
+      }
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
 
-      /* Update territory manager with current level (only on actual change) */
-      if (this.territoryManager && m.you.stage !== undefined && m.you.stage !== this.lastStage) {
-        this.lastStage = m.you.stage;
-        this.territoryManager.handleMessage({
-          type: 'my_evolution',
-          payload: {
-            newLevel: m.you.stage,
-            recalculateTerritories: true,
-          },
-        });
+      /* Update territory manager and GameState when level changes */
+      if (m.you.stage !== previousStage) {
+        const newTerritoryLevel = m.you.stage + 1; // territory levels are 1-based (stage+1)
+        if (this.territoryManager) {
+          this.territoryManager.handleMessage({
+            type: 'my_evolution',
+            payload: {
+              newLevel: newTerritoryLevel,
+              recalculateTerritories: previousStage !== -1,
+            },
+          });
+        }
+        this.gameState.setMyLevel(m.you.stage);
+        this.myStage = m.you.stage;
       }
     }
   }

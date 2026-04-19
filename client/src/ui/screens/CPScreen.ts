@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { net } from "../../network/websocket";
+import { CPNetClient } from "../../network/cp-websocket";
 import { loadCp, setCp } from "../../storage/cp";
 import type { ServerMsg } from "../../network/protocol";
 import { styledButton } from "../styledButton";
@@ -37,6 +37,9 @@ export class CPScreen extends Phaser.Scene {
   private map: maplibregl.Map | null = null;
   private trackCoords: [number, number][] = [];
   private userMarker: maplibregl.Marker | null = null;
+
+  /** CP 専用 WebSocket 接続（ゲームとは独立） */
+  private cpNet = new CPNetClient();
 
   /** サーバーから受け取った最新値 */
   private estimatedDist = 0;
@@ -119,12 +122,12 @@ export class CPScreen extends Phaser.Scene {
     /* WebSocket ハンドラを登録（シーン終了時に解除） */
     this.msgHandler = (msg: ServerMsg) => this.handleServerMsg(msg);
     this.closeHandler = () => this.handleDisconnect();
-    net.onMessage(this.msgHandler);
-    net.onClose(this.closeHandler);
+    this.cpNet.onMessage(this.msgHandler);
+    this.cpNet.onClose(this.closeHandler);
 
     /* 画面表示時にサーバーから最新CP残高を取得 */
-    if (net.isOpen()) {
-      net.send({ type: "cp_balance", payload: {} });
+    if (this.cpNet.isOpen()) {
+      this.cpNet.send({ type: "cp_balance", payload: {} });
     }
   }
 
@@ -239,15 +242,12 @@ export class CPScreen extends Phaser.Scene {
     this.distText.setText("");
 
     try {
-      if (!net.isOpen()) {
-        await net.connect();
-      }
-      // サーバーは join で playerID を割り当てるため、CP操作前に必ず join を送る
-      // waitFor を send の前に登録し、welcome を確実にキャッチする
-      const welcomePromise = net.waitFor("welcome", 10_000);
-      net.send({ type: "join", payload: { name: "__cp__walker", route: "attack" } });
+      // CP 専用の独立した WebSocket 接続を開く（ゲーム接続とは別）
+      await this.cpNet.connect();
+      const welcomePromise = this.cpNet.waitFor("welcome", 10_000);
+      this.cpNet.send({ type: "join", payload: { name: "__cp__walker", route: "attack" } });
       await welcomePromise;
-      net.send({ type: "cp_start", payload: {} });
+      this.cpNet.send({ type: "cp_start", payload: {} });
     } catch {
       this.phase = "idle";
       this.applyPhase();
@@ -259,7 +259,7 @@ export class CPScreen extends Phaser.Scene {
     if (this.phase !== "measuring") return;
     this.setStatus("結果を計算中...", "#ffdd44");
     this.stopWatching();
-    net.send({ type: "cp_stop", payload: {} });
+    this.cpNet.send({ type: "cp_stop", payload: {} });
   }
 
   /* ------------------------------------------------------------------ */
@@ -297,7 +297,7 @@ export class CPScreen extends Phaser.Scene {
     this.lastSendTime = now;
 
     // サーバーに送信（精度フィルタはサーバー側で行う）
-    net.send({ type: "cp_update", payload: { lat, lon, acc } });
+    this.cpNet.send({ type: "cp_update", payload: { lat, lon, acc } });
 
     // 軌跡にローカルでも追加（リアルタイム描画用）
     this.trackCoords.push([lon, lat]);
@@ -314,7 +314,7 @@ export class CPScreen extends Phaser.Scene {
     const container = document.createElement("div");
     container.id = "cp-map";
     container.style.cssText =
-      "position:fixed;top:18%;left:10%;width:80%;height:40%;z-index:10;border-radius:8px;border:1px solid #225588;";
+      "position:fixed;top:18%;left:32%;width:36%;height:40%;z-index:10;border-radius:8px;border:1px solid #225588;";
     document.body.appendChild(container);
 
     // まず現在地を1回取得してから地図を初期化する
@@ -335,7 +335,7 @@ export class CPScreen extends Phaser.Scene {
       sources: {
         osm: {
           type: "raster",
-          tiles: ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"],
+          tiles: ["https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"],
           tileSize: 256,
           attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
         },
@@ -459,13 +459,14 @@ export class CPScreen extends Phaser.Scene {
     this.stopWatching();
     this.destroyMap();
     if (this.msgHandler) {
-      net.offMessage(this.msgHandler);
+      this.cpNet.offMessage(this.msgHandler);
       this.msgHandler = null;
     }
     if (this.closeHandler) {
-      net.offClose(this.closeHandler);
+      this.cpNet.offClose(this.closeHandler);
       this.closeHandler = null;
     }
+    this.cpNet.disconnect();
   }
 
   /* ------------------------------------------------------------------ */

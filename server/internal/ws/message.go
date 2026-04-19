@@ -98,13 +98,15 @@ type StateSharkView struct {
 	Stage       int       `json:"stage"`
 	Route       string    `json:"route,omitempty"`
 	Territories [][]Point `json:"territories,omitempty"`
+	Boosted     bool      `json:"boosted,omitempty"`
 }
 
 type StateFoodView struct {
-	ID    string  `json:"id"`
-	X     float64 `json:"x"`
-	Y     float64 `json:"y"`
-	IsRed bool    `json:"isRed,omitempty"`
+	ID      string  `json:"id"`
+	X       float64 `json:"x"`
+	Y       float64 `json:"y"`
+	IsRed   bool    `json:"isRed,omitempty"`
+	IsDiver bool    `json:"isDiver,omitempty"`
 }
 
 type StateYou struct {

@@ -14,6 +14,11 @@ const (
 
 	FoodCount      = 300
 	FoodPickupDist = 14.0
+	DiverCount         = 3
+	DiverPickupDist    = 20.0
+	DiverXP            = 10
+	DiverSpeedBoostSec = 5.0
+	DiverSpeed         = 25.0
 
 	BaseSpeed       = 140.0
 	DashMultiplier  = 2.0
@@ -202,6 +207,67 @@ func NewWorld() *World {
 func (w *World) nextFoodKey() string {
 	w.nextFoodID++
 	return fmt.Sprintf("f%d", w.nextFoodID)
+}
+
+// SpawnDiversTo adds diver foods until count divers exist.
+func (w *World) SpawnDiversTo(count int) {
+	margin := 200.0
+	diverCount := 0
+	for _, f := range w.Foods {
+		if f.IsDiver {
+			diverCount++
+		}
+	}
+	for diverCount < count {
+		id := w.nextFoodKey()
+		w.Foods[id] = &Food{
+			ID:      id,
+			IsDiver: true,
+			Speed:   DiverSpeed,
+			Angle:   rand.Float64() * math.Pi * 2,
+			Pos: Vec{
+				X: margin + rand.Float64()*(WorldWidth-2*margin),
+				Y: margin + rand.Float64()*(WorldHeight-2*margin),
+			},
+		}
+		diverCount++
+	}
+}
+
+// MoveDivers updates all diver positions.
+func (w *World) MoveDivers(dt float64) {
+	for _, f := range w.Foods {
+		if f.IsDiver {
+			// Random direction change
+			if rand.Float64() < 0.01 {
+				f.Angle += (rand.Float64() - 0.5) * 0.8
+			}
+			f.MoveDiver(dt)
+		}
+	}
+}
+
+// ConsumeDivers checks shark vs diver collisions. Returns eaten diver IDs and applies speed boost.
+func (w *World) ConsumeDivers() []string {
+	var eaten []string
+	for fid, f := range w.Foods {
+		if !f.IsDiver {
+			continue
+		}
+		for _, s := range w.Sharks {
+			if !s.Alive {
+				continue
+			}
+			if s.Head.Dist(f.Pos) < DiverPickupDist*s.SizeScale() {
+				s.XP += DiverXP
+				s.SpeedBoostUntilTick = w.Tick + int64(DiverSpeedBoostSec*float64(TickHz))
+				eaten = append(eaten, fid)
+				delete(w.Foods, fid)
+				break
+			}
+		}
+	}
+	return eaten
 }
 
 // SpawnFoodsTo adds random foods until count foods exist.

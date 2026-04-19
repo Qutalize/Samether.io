@@ -32,6 +32,11 @@ export class Shark extends Phaser.GameObjects.Container {
   private route: SharkRoute = "attack";
   private isSelf: boolean;
   private sharkName = "";
+  private boosted = false;
+
+  // For territory filtering
+  private myLevel: number = 0;
+  private myRoute: SharkRoute = "attack";
 
   /* backbone simulation */
   private spine: Phaser.Math.Vector2[] = [];
@@ -92,11 +97,14 @@ export class Shark extends Phaser.GameObjects.Container {
     const rope = this.rope as any; // Type assertion for Phaser 3.80 postFX API
     if (rope.postFX) {
       rope.postFX.clear();
-      // Increase padding to ensure the outer glow doesn't get clipped by the bounds
       rope.postFX.setPadding(32);
-      const glowColor = getRouteColor(this.route);
-      // addGlow(color, outerStrength, innerStrength, knockout, threshold, distance)
-      rope.postFX.addGlow(glowColor, 4, 0, false, 0.1, 10);
+      if (this.boosted) {
+        // Bright yellow glow when speed boosted
+        rope.postFX.addGlow(0xffdd00, 8, 2, false, 0.1, 16);
+      } else {
+        const glowColor = getRouteColor(this.route);
+        rope.postFX.addGlow(glowColor, 4, 0, false, 0.1, 10);
+      }
     }
   }
 
@@ -116,6 +124,7 @@ export class Shark extends Phaser.GameObjects.Container {
     route: SharkRoute,
     name?: string,
     territories: Array<Array<{ x: number; y: number }>> = [],
+    boosted = false,
   ): void {
     this.targetX = x;
     this.targetY = y;
@@ -135,6 +144,11 @@ export class Shark extends Phaser.GameObjects.Container {
     
     if (route !== this.route) {
       this.route = route;
+      changedAppearance = true;
+    }
+
+    if (boosted !== this.boosted) {
+      this.boosted = boosted;
       changedAppearance = true;
     }
 
@@ -191,7 +205,24 @@ export class Shark extends Phaser.GameObjects.Container {
     this.rope.setPoints(pts);
 
     this.setPosition(this.targetX, this.targetY);
-    this.territoryRenderer.render(territories, this.route);
+
+    // Determine if this territory should be shown and what color
+    const isOwn = this.isSelf;
+    const isSameRoute = this.route === this.myRoute;
+    const isDangerous = !this.isSelf && !isSameRoute && this.stage > this.myLevel;
+
+    this.territoryRenderer.render(territories, this.route, isOwn, isDangerous, isSameRoute);
+  }
+
+  /**
+   * Set the current player's level and route for territory filtering
+   */
+  setMyLevel(level: number): void {
+    this.myLevel = level;
+  }
+
+  setMyRoute(route: SharkRoute): void {
+    this.myRoute = route;
   }
 
   override destroy(fromScene?: boolean): void {

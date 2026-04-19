@@ -26,6 +26,7 @@ function getDummyRoute(id: string): SharkRoute {
 export class GameState {
   private sharks = new Map<string, Shark>();
   private foods = new Map<string, Food>();
+  private myLevel: number = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -38,6 +39,23 @@ export class GameState {
   /** Update the local player ID (called on welcome / first state). */
   setMyId(id: string): void {
     this.myId = id;
+  }
+
+  /** Update the local player's level (called when stage changes). */
+  setMyLevel(level: number): void {
+    this.myLevel = level;
+    // Update all existing sharks with the new level for territory filtering
+    for (const shark of this.sharks.values()) {
+      shark.setMyLevel(level);
+    }
+  }
+
+  /** Update all sharks with the player's route for territory filtering */
+  setMyRoute(route: SharkRoute): void {
+    this.myRoute = route;
+    for (const shark of this.sharks.values()) {
+      shark.setMyRoute(route);
+    }
   }
 
   /** Read-only view of the current shark entities (for radar, etc.). */
@@ -98,6 +116,8 @@ export class GameState {
     const isSelf = v.id === this.myId;
     if (!s) {
       s = new Shark(this.scene, v.x, v.y, isSelf);
+      s.setMyLevel(this.myLevel); // Set current player level for territory filtering
+      s.setMyRoute(this.myRoute); // Set current player route for territory filtering
       this.sharks.set(v.id, s);
       this.onSharkAdded(s);
     }
@@ -113,6 +133,7 @@ export class GameState {
       route,
       v.name,
       v.territories ?? [],
+      v.boosted ?? false,
     );
     return s;
   }
@@ -128,11 +149,11 @@ export class GameState {
   private getOrCreateFood(v: StateFoodView): Food {
     let f = this.foods.get(v.id);
     if (!f) {
-      f = new Food(this.scene, v.x, v.y, v.isRed);
+      f = new Food(this.scene, v.x, v.y, v.isRed, v.isDiver);
       this.foods.set(v.id, f);
       this.onFoodAdded(f);
     }
-    f.setPosition(v.x, v.y);
+    f.updatePosition(v.x, v.y);
     return f;
   }
 
