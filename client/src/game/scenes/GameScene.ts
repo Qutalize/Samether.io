@@ -72,6 +72,8 @@ export class GameScene extends Phaser.Scene {
 
   private trailGraphics!: Phaser.GameObjects.Graphics;
   private pointerTrail: Phaser.Math.Vector2[] = [];
+  private _radarSharkBuf: { id: string; x: number; y: number }[] = [];
+  private _radarFoodBuf: { x: number; y: number }[] = [];
 
 
   /* special effects */
@@ -230,8 +232,17 @@ export class GameScene extends Phaser.Scene {
       this.bgShader.setUniform('uScroll.value.y', centerY * 0.0005);
     }
 
-    /* animate food glow */
-    for (const f of this.gameState.getFoods().values()) f.tickAnim(time);
+    /* animate food glow (only visible foods) */
+    const cam = this.cameras.main;
+    const cullL = cam.scrollX - 50;
+    const cullR = cam.scrollX + cam.width / cam.zoom + 50;
+    const cullT = cam.scrollY - 50;
+    const cullB = cam.scrollY + cam.height / cam.zoom + 50;
+    for (const f of this.gameState.getFoods().values()) {
+      if (f.x >= cullL && f.x <= cullR && f.y >= cullT && f.y <= cullB) {
+        f.tickAnim(time);
+      }
+    }
 
 
     /* radar sweep rotation */
@@ -557,20 +568,20 @@ export class GameScene extends Phaser.Scene {
 
       this.cameras.main.centerOn(m.you.x, m.you.y);
       const zoom = STAGE_ZOOMS[m.you.stage] ?? 1;
-      this.cameras.main.setZoom(zoom);
+      if (this.cameras.main.zoom !== zoom) {
+        this.cameras.main.setZoom(zoom);
+      }
 
-      /* update radar blips */
+      /* update radar blips — reuse arrays to avoid per-tick allocation */
       const sharks = this.gameState.getSharks();
-      const foods = this.gameState.getFoods();
       const mySv = sharks.get(this.myId);
-      this.radarRenderer.setBlips(
-        this.myId,
-        m.you.x,
-        m.you.y,
-        mySv?.angle ?? 0,
-        Array.from(sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y })),
-        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y })),
-      );
+      if (!this._radarSharkBuf) this._radarSharkBuf = [];
+      if (!this._radarFoodBuf) this._radarFoodBuf = [];
+      const sb = this._radarSharkBuf; sb.length = 0;
+      for (const [id, sv] of sharks) { sb.push({ id, x: sv.x, y: sv.y }); }
+      const fb = this._radarFoodBuf; fb.length = 0;
+      for (const fv of this.gameState.getFoods().values()) { fb.push({ x: fv.x, y: fv.y }); }
+      this.radarRenderer.setBlips(this.myId, m.you.x, m.you.y, mySv?.angle ?? 0, sb, fb);
 
       /* XP bar */
       if (m.you.xp > this.prevXp) {
