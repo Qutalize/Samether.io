@@ -156,6 +156,12 @@ export class Shark extends Phaser.GameObjects.Container {
         this.rope.setVisible(false);
         this.humanSprite = (this.scene as Phaser.Scene).add.sprite(0, 0, "diver");
         this.humanSprite.setScale(0.1); // 1/5 of original size (0.5 -> 0.1)
+        this.humanSprite.setAlpha(0.9);
+        this.humanSprite.setTint(0x708898);
+        // Add glow effect like food diver
+        if (this.humanSprite.postFX) {
+          this.humanSprite.postFX.addGlow(0xccaa22, 4, 0, false, 0.1, 10);
+        }
         this.add(this.humanSprite);
       } else if (route !== "human" && this.humanSprite) {
         this.humanSprite.destroy();
