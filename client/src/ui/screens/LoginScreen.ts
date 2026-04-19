@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { login, register, getSession } from "../../storage/auth";
+import { styledButton } from "../styledButton";
 
 const SERIF = "'Times New Roman', 'Georgia', serif";
 
@@ -51,10 +52,10 @@ export class LoginScreen extends Phaser.Scene {
       align: "center",
     }).setOrigin(0.5);
 
-    this.loginBtn = this.styledButton("─  ログイン  ─", "24px", "#44ff88", "#88ffbb", 0x22aa55, 8);
+    this.loginBtn = styledButton(this,"─  ログイン  ─", "24px", "#44ff88", "#88ffbb", 0x22aa55, 8);
     this.loginBtn.on("pointerdown", () => this.handleLogin());
 
-    this.registerBtn = this.styledButton("─  新規登録  ─", "18px", "#ffaa44", "#ffcc88", 0xaa7722, 6);
+    this.registerBtn = styledButton(this,"─  新規登録  ─", "18px", "#ffaa44", "#ffcc88", 0xaa7722, 6);
     this.registerBtn.on("pointerdown", () => this.handleRegister());
 
     this.layout(this.scale.width, this.scale.height);
@@ -74,32 +75,6 @@ export class LoginScreen extends Phaser.Scene {
       this.nameInput.remove();
       this.passwordInput.remove();
     });
-  }
-
-  private styledButton(
-    label: string, fontSize: string, color: string, hoverColor: string, glowColor: number, letterSpacing: number,
-  ): Phaser.GameObjects.Text {
-    const btn = this.add.text(0, 0, label, {
-      fontFamily: SERIF,
-      fontSize,
-      color,
-      letterSpacing,
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => {
-        btn.setColor(hoverColor);
-        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 6, 0, false, 0.1, 12); }
-      })
-      .on("pointerout", () => {
-        btn.setColor(color);
-        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8); }
-      });
-
-    if (btn.postFX) {
-      btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8);
-    }
-    return btn;
   }
 
   private layout(width: number, height: number): void {

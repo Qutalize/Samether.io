@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { styledButton } from "../styledButton";
 
 const SERIF = "'Times New Roman', 'Georgia', serif";
 
@@ -140,27 +141,7 @@ export class GuideScreen extends Phaser.Scene {
 
     /* ── back button ── */
     y += 20;
-    this.backBtn = this.add
-      .text(width / 2, y, "─  戻る  ─", {
-        fontFamily: SERIF,
-        fontSize: "20px",
-        color: "#6688aa",
-        letterSpacing: 6,
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => {
-        this.backBtn.setColor("#88bbdd");
-        if (this.backBtn.postFX) { this.backBtn.postFX.clear(); this.backBtn.postFX.addGlow(0x446688, 6, 0, false, 0.1, 12); }
-      })
-      .on("pointerout", () => {
-        this.backBtn.setColor("#6688aa");
-        if (this.backBtn.postFX) { this.backBtn.postFX.clear(); this.backBtn.postFX.addGlow(0x446688, 3, 0, false, 0.1, 8); }
-      })
-      .on("pointerdown", () => this.scene.start("HomeScreen"));
-
-    if (this.backBtn.postFX) {
-      this.backBtn.postFX.addGlow(0x446688, 3, 0, false, 0.1, 8);
-    }
+    this.backBtn = styledButton(this, "─  戻る  ─", "20px", "#6688aa", "#88bbdd", 0x446688, 6);
+    this.backBtn.setPosition(width / 2, y).on("pointerdown", () => this.scene.start("HomeScreen"));
   }
 }

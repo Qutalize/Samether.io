@@ -3,6 +3,7 @@ import { net } from "../../network/websocket";
 import { SharkRoute } from "../../network/protocol";
 import { loadCp } from "../../storage/cp";
 import { getSession, logout } from "../../storage/auth";
+import { styledButton } from "../styledButton";
 
 const SERIF = "'Times New Roman', 'Georgia', serif";
 
@@ -58,18 +59,18 @@ export class HomeScreen extends Phaser.Scene {
       color: "#6688aa",
     }).setOrigin(0.5);
 
-    this.playBtn = this.styledButton("─  P L A Y  ─", "28px", "#44ff88", "#88ffbb", 0x22aa55, 8);
+    this.playBtn = styledButton(this,"─  P L A Y  ─", "28px", "#44ff88", "#88ffbb", 0x22aa55, 8);
     this.playBtn.on("pointerdown", () => this.tryStart());
 
     this.input.keyboard?.on("keydown-ENTER", () => this.tryStart());
 
-    this.cpBtn = this.styledButton("─  C P 獲 得  ─", "22px", "#ffaa44", "#ffcc88", 0xaa7722, 6);
+    this.cpBtn = styledButton(this,"─  C P 獲 得  ─", "22px", "#ffaa44", "#ffcc88", 0xaa7722, 6);
     this.cpBtn.on("pointerdown", () => this.scene.start("CPScreen"));
 
-    this.guideBtn = this.styledButton("─  ガイド  ─", "20px", "#6688aa", "#88bbdd", 0x446688, 6);
+    this.guideBtn = styledButton(this,"─  ガイド  ─", "20px", "#6688aa", "#88bbdd", 0x446688, 6);
     this.guideBtn.on("pointerdown", () => this.scene.start("GuideScreen"));
 
-    this.logoutBtn = this.styledButton("─  ログアウト  ─", "18px", "#884444", "#ff6666", 0x882222, 4);
+    this.logoutBtn = styledButton(this,"─  ログアウト  ─", "18px", "#884444", "#ff6666", 0x882222, 4);
     this.logoutBtn.on("pointerdown", () => {
       logout();
       this.scene.start("LoginScreen");
@@ -158,32 +159,6 @@ export class HomeScreen extends Phaser.Scene {
         btn.setStroke("#000000", 0);
       }
     });
-  }
-
-  private styledButton(
-    label: string, fontSize: string, color: string, hoverColor: string, glowColor: number, letterSpacing: number,
-  ): Phaser.GameObjects.Text {
-    const btn = this.add.text(0, 0, label, {
-      fontFamily: SERIF,
-      fontSize,
-      color,
-      letterSpacing,
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => {
-        btn.setColor(hoverColor);
-        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 6, 0, false, 0.1, 12); }
-      })
-      .on("pointerout", () => {
-        btn.setColor(color);
-        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8); }
-      });
-
-    if (btn.postFX) {
-      btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8);
-    }
-    return btn;
   }
 
   private async tryStart(): Promise<void> {

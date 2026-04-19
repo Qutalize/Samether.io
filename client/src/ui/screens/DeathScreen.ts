@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { SharkRoute } from "../../network/protocol";
+import { styledButton } from "../styledButton";
 import type { GameScene } from "../../game/scenes/GameScene";
 
 const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
@@ -117,28 +118,8 @@ export class DeathScreen extends Phaser.Scene {
       ease: "Power1",
     });
 
-    this.returnBtn = this.add.text(0, 0, "─  ホームへ戻る  ─", {
-      fontFamily: "'Times New Roman', 'Georgia', serif",
-      fontSize: "20px",
-      color: "#665544",
-      letterSpacing: 6,
-    })
-      .setOrigin(0.5)
-      .setAlpha(0)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => {
-        this.returnBtn.setColor("#ccaa88");
-        if (this.returnBtn.postFX) { this.returnBtn.postFX.clear(); this.returnBtn.postFX.addGlow(0x665544, 6, 0, false, 0.1, 12); }
-      })
-      .on("pointerout", () => {
-        this.returnBtn.setColor("#665544");
-        if (this.returnBtn.postFX) { this.returnBtn.postFX.clear(); this.returnBtn.postFX.addGlow(0x665544, 3, 0, false, 0.1, 8); }
-      })
-      .on("pointerdown", () => this.scene.start("HomeScreen"));
-
-    if (this.returnBtn.postFX) {
-      this.returnBtn.postFX.addGlow(0x665544, 3, 0, false, 0.1, 8);
-    }
+    this.returnBtn = styledButton(this, "─  ホームへ戻る  ─", "20px", "#665544", "#ccaa88", 0x665544, 6);
+    this.returnBtn.setAlpha(0).on("pointerdown", () => this.scene.start("HomeScreen"));
 
     this.tweens.add({
       targets: this.returnBtn,

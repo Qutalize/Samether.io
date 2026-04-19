@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { CPNetClient } from "../../network/cp-websocket";
 import { loadCp, setCp } from "../../storage/cp";
 import type { ServerMsg } from "../../network/protocol";
+import { styledButton } from "../styledButton";
 
 const SERIF = "'Times New Roman', 'Georgia', serif";
 
@@ -95,13 +96,13 @@ export class CPScreen extends Phaser.Scene {
       color: "#6688aa",
     }).setOrigin(0.5);
 
-    this.startBtn = this.styledButton("─  スタート  ─", "28px", "#44ff88", "#88ffbb", 0x22aa55, 8);
+    this.startBtn = styledButton(this,"─  スタート  ─", "28px", "#44ff88", "#88ffbb", 0x22aa55, 8);
     this.startBtn.on("pointerdown", () => this.handleStart());
 
-    this.goalBtn = this.styledButton("─  ストップ  ─", "22px", "#555555", "#88aacc", 0x446688, 4);
+    this.goalBtn = styledButton(this,"─  ストップ  ─", "22px", "#555555", "#88aacc", 0x446688, 4);
     this.goalBtn.on("pointerdown", () => this.handleStop());
 
-    this.backBtn = this.styledButton("─  ホームへ戻る  ─", "18px", "#6688aa", "#88bbdd", 0x446688, 4);
+    this.backBtn = styledButton(this,"─  ホームへ戻る  ─", "18px", "#6688aa", "#88bbdd", 0x446688, 4);
     this.backBtn.on("pointerdown", () => this.goHome());
 
     this.layout(this.scale.width, this.scale.height);
@@ -128,32 +129,6 @@ export class CPScreen extends Phaser.Scene {
     if (this.cpNet.isOpen()) {
       this.cpNet.send({ type: "cp_balance", payload: {} });
     }
-  }
-
-  private styledButton(
-    label: string, fontSize: string, color: string, hoverColor: string, glowColor: number, letterSpacing: number,
-  ): Phaser.GameObjects.Text {
-    const btn = this.add.text(0, 0, label, {
-      fontFamily: SERIF,
-      fontSize,
-      color,
-      letterSpacing,
-    })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerover", () => {
-        btn.setColor(hoverColor);
-        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 6, 0, false, 0.1, 12); }
-      })
-      .on("pointerout", () => {
-        btn.setColor(color);
-        if (btn.postFX) { btn.postFX.clear(); btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8); }
-      });
-
-    if (btn.postFX) {
-      btn.postFX.addGlow(glowColor, 3, 0, false, 0.1, 8);
-    }
-    return btn;
   }
 
   private layout(width: number, height: number): void {
