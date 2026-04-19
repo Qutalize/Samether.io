@@ -141,10 +141,8 @@ export class Shark extends Phaser.GameObjects.Container {
       changedAppearance = true;
     }
 
-    if (name || changedAppearance) {
-      if (this.sharkName) {
-        this.nameText.setText(`${this.sharkName} (進化レベル${this.stage + 1})`);
-      }
+    if (name) {
+      this.nameText.setText(this.sharkName);
     }
     
     if (route !== this.route) {
