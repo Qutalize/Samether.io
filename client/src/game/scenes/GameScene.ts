@@ -553,7 +553,6 @@ export class GameScene extends Phaser.Scene {
 
         // Only trigger evolution event if level actually changed
         if (previousLevel !== currentLevel && previousLevel !== -1) {
-          console.log(`[GameScene] Level change detected: ${previousLevel} → ${currentLevel}`);
           this.territoryManager.handleMessage({
             type: 'my_evolution',
             payload: {
