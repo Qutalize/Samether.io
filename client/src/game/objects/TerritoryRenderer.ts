@@ -27,15 +27,39 @@ export class TerritoryRenderer {
     }
   }
 
-  render(territories: Array<Array<{ x: number; y: number }>>, route: SharkRoute): void {
+  render(
+    territories: Array<Array<{ x: number; y: number }>>,
+    route: SharkRoute,
+    isOwn: boolean,
+    isDangerous: boolean,
+  ): void {
     this.graphics.clear();
     if (!this.enabled || territories.length === 0) {
       return;
     }
 
-    const baseColor = ROUTE_HIGHLIGHT_COLORS[route] ?? 0x66ccff;
-    this.graphics.lineStyle(2, baseColor, 0.35);
-    this.graphics.fillStyle(baseColor, 0.08);
+    // Determine color based on territory type
+    let baseColor: number;
+    let lineAlpha: number;
+    let fillAlpha: number;
+
+    if (isOwn) {
+      // Own territories: use the route highlight color (red/blue/purple by route)
+      baseColor = ROUTE_HIGHLIGHT_COLORS[route] ?? 0x66ccff;
+      lineAlpha = 0.8;
+      fillAlpha = 0.2;
+    } else if (isDangerous) {
+      // Higher level territories: orange (danger)
+      baseColor = 0xff6600; // Orange
+      lineAlpha = 0.9;
+      fillAlpha = 0.3;
+    } else {
+      // Same/lower level territories: don't render
+      return;
+    }
+
+    this.graphics.lineStyle(3, baseColor, lineAlpha);
+    this.graphics.fillStyle(baseColor, fillAlpha);
 
     for (const poly of territories) {
       if (poly.length < 3) {

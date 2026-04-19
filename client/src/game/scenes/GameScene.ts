@@ -44,7 +44,6 @@ export class GameScene extends Phaser.Scene {
   private myId = "";
   private myName = "";
   private myRoute: SharkRoute = "attack";
-  private lastStage = -1;
   private myStage = -1;
 
   /* entity state manager */
@@ -540,7 +539,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (m.you) {
-      if (this.myStage !== -1 && m.you.stage > this.myStage) {
+      const previousStage = this.myStage;
+
+      if (previousStage !== -1 && m.you.stage > previousStage) {
         if (this.sound && this.cache.audio.exists("sfx_levelup")) {
           this.sound.play("sfx_levelup", { volume: 1.0 });
         }
@@ -548,7 +549,6 @@ export class GameScene extends Phaser.Scene {
         const mySv = this.gameState.getSharks().get(this.myId);
         mySv?.playEvolutionPulse();
       }
-      this.myStage = m.you.stage;
 
       this.cameras.main.centerOn(m.you.x, m.you.y);
       const zoom = STAGE_ZOOMS[m.you.stage] ?? 1;
@@ -576,16 +576,20 @@ export class GameScene extends Phaser.Scene {
       }
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
 
-      /* Update territory manager with current level (only on actual change) */
-      if (this.territoryManager && m.you.stage !== undefined && m.you.stage !== this.lastStage) {
-        this.lastStage = m.you.stage;
-        this.territoryManager.handleMessage({
-          type: 'my_evolution',
-          payload: {
-            newLevel: m.you.stage,
-            recalculateTerritories: true,
-          },
-        });
+      /* Update territory manager and GameState when level changes */
+      if (m.you.stage !== previousStage) {
+        const newTerritoryLevel = m.you.stage + 1; // territory levels are 1-based (stage+1)
+        if (this.territoryManager) {
+          this.territoryManager.handleMessage({
+            type: 'my_evolution',
+            payload: {
+              newLevel: newTerritoryLevel,
+              recalculateTerritories: previousStage !== -1,
+            },
+          });
+        }
+        this.gameState.setMyLevel(m.you.stage);
+        this.myStage = m.you.stage;
       }
     }
   }
