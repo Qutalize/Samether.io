@@ -9,6 +9,7 @@ const BODY_COLORS = [0x708898, 0x668090, 0x5c7488, 0x526880, 0x485c78];
 const SIZE_SCALES = [1.3, 1.45, 1.6, 1.8, 2.05];
 
 function resolveSharkTextureKey(stage: number, route: SharkRoute): string {
+  if (route === "human") return "diver"; // Human uses diver sprite
   if (stage <= 1) return "shark_stage01";
   if (stage <= 3) {
     if (route === "attack")     return "shark_stage2_attack";

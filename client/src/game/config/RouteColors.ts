@@ -11,12 +11,14 @@ export const ROUTE_COLORS: Record<SharkRoute, number> = {
   "attack": 0xff6666,     // Red
   "non-attack": 0x66ccff, // Blue
   "deep-sea": 0xbb66ff,   // Purple
+  "human": 0xffcc88,      // Orange/Peach
 };
 
 export const ROUTE_COLORS_HEX: Record<SharkRoute, string> = {
   "attack": "#ff6666",
   "non-attack": "#66ccff",
   "deep-sea": "#bb66ff",
+  "human": "#ffcc88",
 };
 
 /**

@@ -620,6 +620,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onDeath(m: DeathPayload): void {
+    // Play scream sound for human mode
+    if (this.myRoute === "human") {
+      this.sound.play("sfx_death", { volume: 0.8 });
+    }
     this.scene.start("DeathScreen", { score: m.score, stage: m.stage, route: this.myRoute });
   }
 
