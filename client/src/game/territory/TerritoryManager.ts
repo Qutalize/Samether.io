@@ -176,7 +176,7 @@ export class TerritoryManager {
     this.myLevel = newLevel;
     this.cache.setMyLevel(newLevel);
 
-    this.showSuccess(`進化しました！レベル ${newLevel}`);
+    // 進化通知は無効化（2個表示されるバグ #65 未解決のため）
 
     // Recalculate is automatically handled by TerritoryCache
   }
