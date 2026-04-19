@@ -19,6 +19,7 @@ func (w *World) CheckWallDeaths() []string {
 
 // CheckSharkCollisions kills any shark whose head (index 0 excluded from self)
 // is within CollisionBodyRad of another shark's non-head segment.
+// Humans (RouteHuman) die on collision with any shark segment, including heads.
 // Returns IDs of newly dead sharks.
 func (w *World) CheckSharkCollisions() []string {
 	var dead []string
@@ -31,8 +32,12 @@ func (w *World) CheckSharkCollisions() []string {
 			if otherID == id || !other.Alive {
 				continue
 			}
-			// Skip segment[0] of other (head-to-head is symmetric and unfair).
-			for i := 1; i < len(other.Segments); i++ {
+			// Humans die on collision with any shark part, including head
+			startIndex := 1
+			if self.Route == RouteHuman {
+				startIndex = 0 // Check all segments including head
+			}
+			for i := startIndex; i < len(other.Segments); i++ {
 				if headPos.Dist(other.Segments[i]) <= CollisionBodyRad*other.SizeScale() {
 					self.Alive = false
 					dead = append(dead, id)

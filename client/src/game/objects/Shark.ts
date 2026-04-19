@@ -152,7 +152,7 @@ export class Shark extends Phaser.GameObjects.Container {
       if (route === "human" && !this.humanSprite) {
         this.rope.setVisible(false);
         this.humanSprite = (this.scene as Phaser.Scene).add.sprite(0, 0, "diver");
-        this.humanSprite.setScale(0.5); // Adjust size as needed
+        this.humanSprite.setScale(0.1); // 1/5 of original size (0.5 -> 0.1)
         this.add(this.humanSprite);
       } else if (route !== "human" && this.humanSprite) {
         this.humanSprite.destroy();
