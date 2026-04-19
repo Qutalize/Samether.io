@@ -133,6 +133,7 @@ export class GameState {
       route,
       v.name,
       v.territories ?? [],
+      v.boosted ?? false,
     );
     return s;
   }
@@ -148,11 +149,11 @@ export class GameState {
   private getOrCreateFood(v: StateFoodView): Food {
     let f = this.foods.get(v.id);
     if (!f) {
-      f = new Food(this.scene, v.x, v.y, v.isRed);
+      f = new Food(this.scene, v.x, v.y, v.isRed, v.isDiver);
       this.foods.set(v.id, f);
       this.onFoodAdded(f);
     }
-    f.setPosition(v.x, v.y);
+    f.updatePosition(v.x, v.y);
     return f;
   }
 

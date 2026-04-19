@@ -416,6 +416,15 @@ func (h *Hub) step(dt float64) {
 	territoryDead := h.world.CheckTerritoryViolations()
 	sharkDead := h.world.CheckSharkCollisions()
 	_ = h.world.ConsumeFoods()
+	h.world.MoveDivers(dt)
+	_ = h.world.ConsumeDivers()
+
+	// Decay speed boosts
+	for _, s := range h.world.Sharks {
+		if s.SpeedBoostUntilTick > 0 && h.world.Tick > s.SpeedBoostUntilTick {
+			s.SpeedBoostUntilTick = 0
+		}
+	}
 
 	for _, s := range h.world.Sharks {
 		if s.Alive {
@@ -447,6 +456,7 @@ func (h *Hub) step(dt float64) {
 	}
 
 	h.world.SpawnFoodsTo(game.FoodCount)
+	h.world.SpawnDiversTo(game.DiverCount)
 
 	h.leaderboard.BeginTick()
 	for id, s := range h.world.Sharks {
@@ -501,7 +511,7 @@ func (h *Hub) broadcastLeaderboard() {
 }
 
 func sharkViewEqual(a, b StateSharkView) bool {
-	return a.ID == b.ID && a.Name == b.Name && a.X == b.X && a.Y == b.Y && a.Angle == b.Angle && a.Stage == b.Stage && a.Route == b.Route && territoriesEqual(a.Territories, b.Territories)
+	return a.ID == b.ID && a.Name == b.Name && a.X == b.X && a.Y == b.Y && a.Angle == b.Angle && a.Stage == b.Stage && a.Route == b.Route && a.Boosted == b.Boosted && territoriesEqual(a.Territories, b.Territories)
 }
 
 func territoriesEqual(a, b [][]Point) bool {
@@ -522,7 +532,7 @@ func territoriesEqual(a, b [][]Point) bool {
 }
 
 func foodViewEqual(a, b StateFoodView) bool {
-	return a.ID == b.ID && a.X == b.X && a.Y == b.Y && a.IsRed == b.IsRed
+	return a.ID == b.ID && a.X == b.X && a.Y == b.Y && a.IsRed == b.IsRed && a.IsDiver == b.IsDiver
 }
 
 func pointInPolygon(pt game.Vec, polygon []game.Vec) bool {
@@ -627,6 +637,7 @@ func (h *Hub) sendStateTo(c *Client) {
 			Stage:       s.Stage,
 			Route:       s.Route,
 			Territories: territories,
+			Boosted:     s.SpeedBoostUntilTick > 0 && h.world.Tick <= s.SpeedBoostUntilTick,
 		}
 		currentSharks = append(currentSharks, view)
 		currentSharkMap[view.ID] = view
@@ -639,10 +650,11 @@ func (h *Hub) sendStateTo(c *Client) {
 			continue
 		}
 		view := StateFoodView{
-			ID:    f.ID,
-			X:     f.Pos.X,
-			Y:     f.Pos.Y,
-			IsRed: f.IsRed,
+			ID:      f.ID,
+			X:       f.Pos.X,
+			Y:       f.Pos.Y,
+			IsRed:   f.IsRed,
+			IsDiver: f.IsDiver,
 		}
 		currentFoods = append(currentFoods, view)
 		currentFoodMap[view.ID] = view

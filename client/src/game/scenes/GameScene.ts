@@ -73,16 +73,6 @@ export class GameScene extends Phaser.Scene {
   private trailGraphics!: Phaser.GameObjects.Graphics;
   private pointerTrail: Phaser.Math.Vector2[] = [];
 
-  /* decorative divers */
-  private divers: {
-    sprite: Phaser.GameObjects.Image;
-    vx: number;
-    vy: number;
-    targetAngle: number;
-    currentAngle: number;
-    baseY: number;
-    bobPhase: number;
-  }[] = [];
 
   /* special effects */
   private suctionEffect!: SuctionEffect;
@@ -156,8 +146,6 @@ export class GameScene extends Phaser.Scene {
     this.trailGraphics = this.add.graphics().setDepth(-1);
     this.worldContainer.add(this.trailGraphics);
 
-    /* decorative divers swimming in the world */
-    this.spawnDivers(5);
 
     /* special effects */
     this.suctionEffect = new SuctionEffect(this);
@@ -245,8 +233,6 @@ export class GameScene extends Phaser.Scene {
     /* animate food glow */
     for (const f of this.gameState.getFoods().values()) f.tickAnim(time);
 
-    /* move divers */
-    this.updateDivers(delta);
 
     /* radar sweep rotation */
     this.radarRenderer.tick(delta);
@@ -476,82 +462,6 @@ export class GameScene extends Phaser.Scene {
   /* ════════════════════════════════════════════════════════ */
   /*  WORLD BORDER                                            */
   /* ════════════════════════════════════════════════════════ */
-  private spawnDivers(count: number): void {
-    for (let i = 0; i < count; i++) {
-      const x = 200 + Math.random() * (this.worldW - 400);
-      const y = 200 + Math.random() * (this.worldH - 400);
-      const speed = 18 + Math.random() * 12;
-      const angle = Math.random() * Math.PI * 2;
-
-      const sprite = this.add.image(x, y, "diver")
-        .setScale(0.06)
-        .setDepth(1)
-        .setAlpha(0.7)
-        .setRotation(angle);
-
-      if (sprite.postFX) {
-        sprite.postFX.addGlow(0x224466, 2, 0, false, 0.1, 6);
-      }
-
-      this.worldContainer.add(sprite);
-      this.divers.push({
-        sprite,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        targetAngle: angle,
-        currentAngle: angle,
-        baseY: y,
-        bobPhase: Math.random() * Math.PI * 2,
-      });
-    }
-  }
-
-  private updateDivers(delta: number): void {
-    const dt = delta / 1000;
-    const margin = 150;
-
-    for (const d of this.divers) {
-      // Gentle random direction changes
-      if (Math.random() < 0.008) {
-        d.targetAngle += (Math.random() - 0.5) * 1.0;
-      }
-
-      // Smooth turning toward target angle
-      let angleDiff = d.targetAngle - d.currentAngle;
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      d.currentAngle += angleDiff * dt * 1.5;
-
-      const speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
-      d.vx = Math.cos(d.currentAngle) * speed;
-      d.vy = Math.sin(d.currentAngle) * speed;
-
-      d.sprite.x += d.vx * dt;
-      d.baseY += d.vy * dt;
-
-      // Bobbing motion (up and down like swimming)
-      d.bobPhase += dt * 2.5;
-      d.sprite.y = d.baseY + Math.sin(d.bobPhase) * 6;
-
-      // Steer away from walls smoothly
-      if (d.sprite.x < margin) d.targetAngle = 0;
-      else if (d.sprite.x > this.worldW - margin) d.targetAngle = Math.PI;
-      if (d.baseY < margin) d.targetAngle = Math.PI / 2;
-      else if (d.baseY > this.worldH - margin) d.targetAngle = -Math.PI / 2;
-
-      d.sprite.x = Phaser.Math.Clamp(d.sprite.x, margin - 50, this.worldW - margin + 50);
-      d.baseY = Phaser.Math.Clamp(d.baseY, margin - 50, this.worldH - margin + 50);
-
-      // Smooth rotation with swimming wobble (body sway like kicking)
-      const wobble = Math.sin(d.bobPhase * 3) * 0.08;
-      d.sprite.setRotation(d.currentAngle + wobble);
-      d.sprite.setFlipY(Math.cos(d.currentAngle) < 0);
-
-      // Subtle scale pulse to simulate limb movement
-      const kick = 1.0 + Math.sin(d.bobPhase * 4) * 0.03;
-      d.sprite.setScale(0.06 * kick, 0.06);
-    }
-  }
 
   private drawWorldBorder(): void {
     this.worldBorder.clear();
