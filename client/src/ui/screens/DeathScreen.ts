@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { SharkRoute } from "../../network/protocol";
+import type { GameScene } from "../../game/scenes/GameScene";
 
 const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
   "attack": ["シュモクザメ", "イタチザメ", "アオザメ", "ホオジロザメ", "メガロドン"],
@@ -11,6 +12,7 @@ export class DeathScreen extends Phaser.Scene {
   private score = 0;
   private stage = 0;
   private route: SharkRoute = "attack";
+  private deathSound?: Phaser.Sound.BaseSound;
   private overlay!: Phaser.GameObjects.Graphics;
   private lineTop!: Phaser.GameObjects.Graphics;
   private lineBot!: Phaser.GameObjects.Graphics;
@@ -23,6 +25,10 @@ export class DeathScreen extends Phaser.Scene {
     super({ key: "DeathScreen" });
   }
 
+  preload(): void {
+    this.load.audio("sfx_death", "audio/sfx_death.mp3");
+  }
+
   init(data: { score: number; stage: number; route?: SharkRoute }): void {
     this.score = data.score;
     this.stage = data.stage;
@@ -30,6 +36,22 @@ export class DeathScreen extends Phaser.Scene {
   }
 
   create(): void {
+    /* Stop BGM */
+    const gameScene = this.scene.get("GameScene") as GameScene;
+    if (gameScene && gameScene.stopBgm) {
+      gameScene.stopBgm();
+    }
+
+    /* Schedule death sound effect */
+    if (this.sound && this.cache.audio.exists("sfx_death")) {
+      this.time.delayedCall(600, () => {
+        this.deathSound = this.sound.add("sfx_death", { loop: false, volume: 1.0 });
+        if (this.deathSound) {
+          this.deathSound.play();
+        }
+      });
+    }
+
     this.overlay = this.add.graphics();
     this.overlay.setAlpha(0);
     this.tweens.add({
@@ -61,6 +83,10 @@ export class DeathScreen extends Phaser.Scene {
     })
       .setOrigin(0.5)
       .setAlpha(0);
+
+    if (this.diedText.postFX) {
+      this.diedText.postFX.addGlow(0x8b0000, 8, 0, false, 0.1, 16);
+    }
 
     this.tweens.add({
       targets: this.diedText,
