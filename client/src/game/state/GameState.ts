@@ -50,6 +50,14 @@ export class GameState {
     }
   }
 
+  /** Update all sharks with the player's route for territory filtering */
+  setMyRoute(route: SharkRoute): void {
+    this.myRoute = route;
+    for (const shark of this.sharks.values()) {
+      shark.setMyRoute(route);
+    }
+  }
+
   /** Read-only view of the current shark entities (for radar, etc.). */
   getSharks(): Map<string, Shark> {
     return this.sharks;
@@ -109,6 +117,7 @@ export class GameState {
     if (!s) {
       s = new Shark(this.scene, v.x, v.y, isSelf);
       s.setMyLevel(this.myLevel); // Set current player level for territory filtering
+      s.setMyRoute(this.myRoute); // Set current player route for territory filtering
       this.sharks.set(v.id, s);
       this.onSharkAdded(s);
     }

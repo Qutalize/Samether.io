@@ -32,6 +32,7 @@ export class TerritoryRenderer {
     route: SharkRoute,
     isOwn: boolean,
     isDangerous: boolean,
+    isSameRoute: boolean = false,
   ): void {
     this.graphics.clear();
     if (!this.enabled || territories.length === 0) {
@@ -44,17 +45,22 @@ export class TerritoryRenderer {
     let fillAlpha: number;
 
     if (isOwn) {
-      // Own territories: use route color (green)
+      // Own territories: use route color with strong visibility
       baseColor = ROUTE_HIGHLIGHT_COLORS[route] ?? 0x66ccff;
       lineAlpha = 0.8;
       fillAlpha = 0.2;
+    } else if (isSameRoute) {
+      // Same route territories (allies): use route color but dimmer (safe zones)
+      baseColor = ROUTE_HIGHLIGHT_COLORS[route] ?? 0x66ccff;
+      lineAlpha = 0.4;
+      fillAlpha = 0.1;
     } else if (isDangerous) {
-      // Higher level territories: orange (danger)
+      // Different route, higher level territories: orange (danger)
       baseColor = 0xff6600; // Orange
       lineAlpha = 0.9;
       fillAlpha = 0.3;
     } else {
-      // Same/lower level territories: don't render
+      // Same/lower level, different route: don't render
       return;
     }
 

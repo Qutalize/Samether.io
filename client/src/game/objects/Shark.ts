@@ -35,6 +35,7 @@ export class Shark extends Phaser.GameObjects.Container {
 
   // For territory filtering
   private myLevel: number = 0;
+  private myRoute: SharkRoute = "attack";
 
   /* backbone simulation */
   private spine: Phaser.Math.Vector2[] = [];
@@ -197,16 +198,21 @@ export class Shark extends Phaser.GameObjects.Container {
 
     // Determine if this territory should be shown and what color
     const isOwn = this.isSelf;
-    const isDangerous = !this.isSelf && this.stage > this.myLevel;
+    const isSameRoute = this.route === this.myRoute;
+    const isDangerous = !this.isSelf && !isSameRoute && this.stage > this.myLevel;
 
-    this.territoryRenderer.render(territories, this.route, isOwn, isDangerous);
+    this.territoryRenderer.render(territories, this.route, isOwn, isDangerous, isSameRoute);
   }
 
   /**
-   * Set the current player's level for territory filtering
+   * Set the current player's level and route for territory filtering
    */
   setMyLevel(level: number): void {
     this.myLevel = level;
+  }
+
+  setMyRoute(route: SharkRoute): void {
+    this.myRoute = route;
   }
 
   override destroy(fromScene?: boolean): void {
