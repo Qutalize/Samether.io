@@ -569,8 +569,9 @@ export class GameScene extends Phaser.Scene {
         m.you.x,
         m.you.y,
         mySv?.angle ?? 0,
+        mySv?.route ?? "attack",
         Array.from(sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y })),
-        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y })),
+        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y, isRed: fv.isRed })),
       );
 
       /* XP bar */
