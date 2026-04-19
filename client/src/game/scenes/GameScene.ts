@@ -519,7 +519,12 @@ export class GameScene extends Phaser.Scene {
         const mySv = this.gameState.getSharks().get(this.myId);
         mySv?.playEvolutionPulse();
       }
-      this.myStage = m.you.stage;
+
+      // Update territory filtering when level changes
+      if (this.myStage !== m.you.stage) {
+        this.myStage = m.you.stage;
+        this.gameState.setMyLevel(m.you.stage);
+      }
 
       this.cameras.main.centerOn(m.you.x, m.you.y);
       const zoom = STAGE_ZOOMS[m.you.stage] ?? 1;
@@ -541,17 +546,31 @@ export class GameScene extends Phaser.Scene {
       /* XP bar */
       this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
 
-      /* Update territory manager with current level */
+      /* Update territory manager with current level (only when level changes) */
       if (this.territoryManager && m.you.stage !== undefined) {
-        // Trigger evolution event if level changed
+        const previousLevel = this.myStage;
         const currentLevel = m.you.stage;
-        this.territoryManager.handleMessage({
-          type: 'my_evolution',
-          payload: {
-            newLevel: currentLevel,
-            recalculateTerritories: true,
-          },
-        });
+
+        // Only trigger evolution event if level actually changed
+        if (previousLevel !== currentLevel && previousLevel !== -1) {
+          console.log(`[GameScene] Level change detected: ${previousLevel} → ${currentLevel}`);
+          this.territoryManager.handleMessage({
+            type: 'my_evolution',
+            payload: {
+              newLevel: currentLevel,
+              recalculateTerritories: true,
+            },
+          });
+        } else if (previousLevel === -1) {
+          // First initialization
+          this.territoryManager.handleMessage({
+            type: 'my_evolution',
+            payload: {
+              newLevel: currentLevel,
+              recalculateTerritories: false,
+            },
+          });
+        }
       }
     }
   }
