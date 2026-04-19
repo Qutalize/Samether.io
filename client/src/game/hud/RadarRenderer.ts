@@ -144,7 +144,7 @@ export class RadarRenderer implements HudComponent {
     }
 
     /* player direction arrow (center) - points in shark's movement direction */
-    const a = this.myAngle - Math.PI / 2; // convert from Phaser angle (0=right) to arrow pointing up when angle=0
+    const a = this.myAngle + Math.PI / 2; // adjust for radar coordinate system
     const al = 10;
     const aw = 6;
     const tipX = cx + Math.cos(a) * al;
