@@ -22,7 +22,7 @@ import { SuctionEffect } from "../effects/SuctionEffect";
 import { getRouteColor } from "../config/RouteColors";
 
 /* ── constants ─────────────────────────────────────────────── */
-const STAGE_ZOOMS = [1.0, 0.82, 0.65, 0.48, 0.35];
+const STAGE_ZOOMS = [1.0, 0.92, 0.84, 0.76, 0.68];
 
 const ENABLE_TRAIL_ON_HOLD = true;
 const TRAIL_POINT_SPACING = 12;
