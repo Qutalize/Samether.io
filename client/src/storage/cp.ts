@@ -13,6 +13,10 @@ export function addCp(earned: number): number {
   return next;
 }
 
+export function setCp(total: number): void {
+  localStorage.setItem(STORAGE_KEY, String(Math.max(0, Math.floor(total))));
+}
+
 export function resetCp(): void {
   localStorage.removeItem(STORAGE_KEY);
 }

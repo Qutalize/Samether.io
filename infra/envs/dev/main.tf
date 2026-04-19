@@ -51,6 +51,8 @@ module "ecs_service" {
   room_capacity             = var.room_capacity
   redis_primary_endpoint    = module.redis.primary_endpoint_address
   location_tracker_name     = module.location.tracker_name
+  location_map_name         = module.location.map_name
+  location_map_api_key      = var.location_map_api_key
   allowed_origin            = var.allowed_origin
 }
 
@@ -76,10 +78,14 @@ module "github_oidc" {
   name_prefix          = local.name_prefix
   github_repo          = "Qutalize/Samether.io"
   frontend_bucket_name = module.frontend_static.bucket_name
+  ecr_repository_arn   = module.ecr.repository_arn
+  ecs_cluster_name     = "${local.name_prefix}-cluster"
+  ecs_service_name     = "${local.name_prefix}-service"
 }
 
 module "location" {
   source = "../../modules/location"
 
   tracker_name = var.location_tracker_name
+  map_name     = var.location_map_name
 }

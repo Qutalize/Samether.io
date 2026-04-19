@@ -45,7 +45,7 @@ export class TerritoryRenderer {
     let fillAlpha: number;
 
     if (isOwn) {
-      // Own territories: use route color with strong visibility
+      // Own territories: use the route highlight color (red/blue/purple by route)
       baseColor = ROUTE_HIGHLIGHT_COLORS[route] ?? 0x66ccff;
       lineAlpha = 0.8;
       fillAlpha = 0.2;
