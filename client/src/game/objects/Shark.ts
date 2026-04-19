@@ -9,6 +9,7 @@ const BODY_COLORS = [0x708898, 0x668090, 0x5c7488, 0x526880, 0x485c78];
 const SIZE_SCALES = [1.3, 1.45, 1.6, 1.8, 2.05];
 
 function resolveSharkTextureKey(stage: number, route: SharkRoute): string {
+  if (route === "human") return "diver"; // Human uses diver sprite
   if (stage <= 1) return "shark_stage01";
   if (stage <= 3) {
     if (route === "attack")     return "shark_stage2_attack";
@@ -25,6 +26,7 @@ const BASE_SPACING = 5.5;
 
 export class Shark extends Phaser.GameObjects.Container {
   private rope: Phaser.GameObjects.Rope;
+  private humanSprite?: Phaser.GameObjects.Sprite; // Simple sprite for human mode
   private nameText: Phaser.GameObjects.Text;
   private territoryRenderer: TerritoryRenderer;
 
@@ -149,6 +151,24 @@ export class Shark extends Phaser.GameObjects.Container {
     if (route !== this.route) {
       this.route = route;
       changedAppearance = true;
+
+      // Initialize human sprite if switching to human mode
+      if (route === "human" && !this.humanSprite) {
+        this.rope.setVisible(false);
+        this.humanSprite = (this.scene as Phaser.Scene).add.sprite(0, 0, "diver");
+        this.humanSprite.setScale(0.1); // 1/5 of original size (0.5 -> 0.1)
+        this.humanSprite.setAlpha(0.9);
+        this.humanSprite.setTint(0x708898);
+        // Add glow effect like food diver
+        if (this.humanSprite.postFX) {
+          this.humanSprite.postFX.addGlow(0xccaa22, 4, 0, false, 0.1, 10);
+        }
+        this.add(this.humanSprite);
+      } else if (route !== "human" && this.humanSprite) {
+        this.humanSprite.destroy();
+        this.humanSprite = undefined;
+        this.rope.setVisible(true);
+      }
     }
 
     if (boosted !== this.boosted) {
@@ -156,56 +176,63 @@ export class Shark extends Phaser.GameObjects.Container {
       changedAppearance = true;
     }
 
-    if (changedAppearance) {
+    if (changedAppearance && route !== "human") {
       this.updateColors();
     }
 
-    /* rigid head segments (hardly bend) */
-    this.spine[0].set(x, y);
-    for (let i = 1; i < 4; i++) {
-      this.spine[i].set(
-        this.spine[i - 1].x - Math.cos(angle) * BASE_SPACING,
-        this.spine[i - 1].y - Math.sin(angle) * BASE_SPACING,
-      );
-    }
-
-    /* trailing segments follow like a rope (inlined math for perf) */
-    for (let i = 4; i < SEGMENT_COUNT; i++) {
-      const prev = this.spine[i - 1];
-      const curr = this.spine[i];
-      const dx = prev.x - curr.x;
-      const dy = prev.y - curr.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > BASE_SPACING) {
-        const a = Math.atan2(prev.y - curr.y, prev.x - curr.x);
-        curr.x = prev.x - Math.cos(a) * BASE_SPACING;
-        curr.y = prev.y - Math.sin(a) * BASE_SPACING;
-      }
-    }
-
-    /* compute display points (spine + wave offset) — reuse pre-allocated array */
-    let pIdx = 0;
-    for (let i = SEGMENT_COUNT - 1; i >= 0; i--) {
-      const sp = this.spine[i];
-      let sa = this.targetAngle;
-      if (i > 0) {
-        const dx = this.spine[i - 1].x - sp.x;
-        const dy = this.spine[i - 1].y - sp.y;
-        sa = Math.atan2(dy, dx);
+    // Human mode: simple sprite movement
+    if (this.route === "human" && this.humanSprite) {
+      this.setPosition(this.targetX, this.targetY);
+      this.humanSprite.setRotation(angle);
+    } else {
+      // Shark mode: rope-based movement
+      /* rigid head segments (hardly bend) */
+      this.spine[0].set(x, y);
+      for (let i = 1; i < 4; i++) {
+        this.spine[i].set(
+          this.spine[i - 1].x - Math.cos(angle) * BASE_SPACING,
+          this.spine[i - 1].y - Math.sin(angle) * BASE_SPACING,
+        );
       }
 
-      const prog = i / (SEGMENT_COUNT - 1);
-      const wave = this.waveAt(prog, t, i);
-      const norm = sa + Math.PI / 2;
+      /* trailing segments follow like a rope (inlined math for perf) */
+      for (let i = 4; i < SEGMENT_COUNT; i++) {
+        const prev = this.spine[i - 1];
+        const curr = this.spine[i];
+        const dx = prev.x - curr.x;
+        const dy = prev.y - curr.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > BASE_SPACING) {
+          const a = Math.atan2(prev.y - curr.y, prev.x - curr.x);
+          curr.x = prev.x - Math.cos(a) * BASE_SPACING;
+          curr.y = prev.y - Math.sin(a) * BASE_SPACING;
+        }
+      }
 
-      this.ropePts[pIdx].x = sp.x + Math.cos(norm) * wave - this.targetX;
-      this.ropePts[pIdx].y = sp.y + Math.sin(norm) * wave - this.targetY;
-      pIdx++;
+      /* compute display points (spine + wave offset) — reuse pre-allocated array */
+      let pIdx = 0;
+      for (let i = SEGMENT_COUNT - 1; i >= 0; i--) {
+        const sp = this.spine[i];
+        let sa = this.targetAngle;
+        if (i > 0) {
+          const dx = this.spine[i - 1].x - sp.x;
+          const dy = this.spine[i - 1].y - sp.y;
+          sa = Math.atan2(dy, dx);
+        }
+
+        const prog = i / (SEGMENT_COUNT - 1);
+        const wave = this.waveAt(prog, t, i);
+        const norm = sa + Math.PI / 2;
+
+        this.ropePts[pIdx].x = sp.x + Math.cos(norm) * wave - this.targetX;
+        this.ropePts[pIdx].y = sp.y + Math.sin(norm) * wave - this.targetY;
+        pIdx++;
+      }
+
+      this.rope.setPoints(this.ropePts);
+
+      this.setPosition(this.targetX, this.targetY);
     }
-
-    this.rope.setPoints(this.ropePts);
-
-    this.setPosition(this.targetX, this.targetY);
 
     // Determine if this territory should be shown and what color
     const isOwn = this.isSelf;
@@ -227,6 +254,9 @@ export class Shark extends Phaser.GameObjects.Container {
   }
 
   override destroy(fromScene?: boolean): void {
+    if (this.humanSprite) {
+      this.humanSprite.destroy();
+    }
     this.territoryRenderer.destroy();
     super.destroy(fromScene);
   }

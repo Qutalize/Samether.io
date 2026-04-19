@@ -109,6 +109,7 @@ export class GameScene extends Phaser.Scene {
     this.load.audio("bgm", "audio/bgm.mp3");
     this.load.audio("sfx_xp_gain", "audio/sfx_xp_gain.mp3");
     this.load.audio("sfx_levelup", "audio/sfx_levelup.mp3");
+    this.load.audio("human_scream", "audio/human_scream.mp3");
     if (!this.cache.shader.has("OceanBackground")) {
       this.cache.shader.add("OceanBackground", OceanBackgroundShader);
     }
@@ -572,16 +573,28 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.setZoom(zoom);
       }
 
-      /* update radar blips — reuse arrays to avoid per-tick allocation */
+      /* update radar blips */
       const sharks = this.gameState.getSharks();
-      const mySv = sharks.get(this.myId);
-      if (!this._radarSharkBuf) this._radarSharkBuf = [];
-      if (!this._radarFoodBuf) this._radarFoodBuf = [];
-      const sb = this._radarSharkBuf; sb.length = 0;
-      for (const [id, sv] of sharks) { sb.push({ id, x: sv.x, y: sv.y }); }
-      const fb = this._radarFoodBuf; fb.length = 0;
-      for (const fv of this.gameState.getFoods().values()) { fb.push({ x: fv.x, y: fv.y }); }
-      this.radarRenderer.setBlips(this.myId, m.you.x, m.you.y, mySv?.angle ?? 0, sb, fb);
+
+      // Find self in server data for angle
+      let myAngle = 0;
+      const allSharks = m.full ? m.sharks : m.updatedSharks;
+      const mySelf = allSharks?.find(s => s.id === this.myId);
+      if (mySelf) {
+        myAngle = mySelf.angle;
+      }
+
+      this.radarRenderer.setBlips(
+        this.myId,
+        m.you.x,
+        m.you.y,
+        myAngle,
+        this.myRoute,
+        this.myRoute === "attack"
+          ? Array.from(sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y }))
+          : [],
+        Array.from(this.gameState.getFoods().values()).map((fv) => ({ x: fv.x, y: fv.y, isRed: fv.isRed })),
+      );
 
       /* XP bar */
       if (m.you.xp > this.prevXp) {
@@ -631,6 +644,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onDeath(m: DeathPayload): void {
+    // Play scream sound for human mode
+    if (this.myRoute === "human") {
+      this.sound.play("human_scream", { volume: 0.8 });
+    }
     this.scene.start("DeathScreen", { score: m.score, stage: m.stage, route: this.myRoute });
   }
 

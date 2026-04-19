@@ -23,3 +23,12 @@ const game = new Phaser.Game(config);
 game.events.once(Phaser.Core.Events.READY, () => {
   setTimeout(() => game.scale.refresh(), 100);
 });
+
+/* ── Mobile orientation lock (no effect on desktop) ─── */
+const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+if (isMobile) {
+  const so = screen.orientation as ScreenOrientation & {
+    lock?: (m: string) => Promise<void>;
+  };
+  so.lock?.("portrait").catch(() => {});
+}

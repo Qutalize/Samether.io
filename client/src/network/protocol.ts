@@ -1,6 +1,6 @@
 // Mirrors server/internal/ws/message.go
 
-export type SharkRoute = "attack" | "non-attack" | "deep-sea";
+export type SharkRoute = "attack" | "non-attack" | "deep-sea" | "human";
 
 export type BaseMessage<T extends string, P> = {
   type: T;
