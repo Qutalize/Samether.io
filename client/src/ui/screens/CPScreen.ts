@@ -339,7 +339,7 @@ export class CPScreen extends Phaser.Scene {
     const container = document.createElement("div");
     container.id = "cp-map";
     container.style.cssText =
-      "position:fixed;top:18%;left:20%;width:60%;height:40%;z-index:10;border-radius:8px;border:1px solid #225588;filter:brightness(1.6);";
+      "position:fixed;top:18%;left:20%;width:60%;height:40%;z-index:10;border-radius:8px;border:1px solid #225588;filter:brightness(2.0);";
     document.body.appendChild(container);
 
     // まず現在地を1回取得してから地図を初期化する
