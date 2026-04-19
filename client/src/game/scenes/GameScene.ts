@@ -72,6 +72,8 @@ export class GameScene extends Phaser.Scene {
 
   private trailGraphics!: Phaser.GameObjects.Graphics;
   private pointerTrail: Phaser.Math.Vector2[] = [];
+  private _radarSharkBuf: { id: string; x: number; y: number }[] = [];
+  private _radarFoodBuf: { x: number; y: number }[] = [];
 
 
   /* special effects */
@@ -231,8 +233,17 @@ export class GameScene extends Phaser.Scene {
       this.bgShader.setUniform('uScroll.value.y', centerY * 0.0005);
     }
 
-    /* animate food glow */
-    for (const f of this.gameState.getFoods().values()) f.tickAnim(time);
+    /* animate food glow (only visible foods) */
+    const cam = this.cameras.main;
+    const cullL = cam.scrollX - 50;
+    const cullR = cam.scrollX + cam.width / cam.zoom + 50;
+    const cullT = cam.scrollY - 50;
+    const cullB = cam.scrollY + cam.height / cam.zoom + 50;
+    for (const f of this.gameState.getFoods().values()) {
+      if (f.x >= cullL && f.x <= cullR && f.y >= cullT && f.y <= cullB) {
+        f.tickAnim(time);
+      }
+    }
 
 
     /* radar sweep rotation */
@@ -558,11 +569,12 @@ export class GameScene extends Phaser.Scene {
 
       this.cameras.main.centerOn(m.you.x, m.you.y);
       const zoom = STAGE_ZOOMS[m.you.stage] ?? 1;
-      this.cameras.main.setZoom(zoom);
+      if (this.cameras.main.zoom !== zoom) {
+        this.cameras.main.setZoom(zoom);
+      }
 
       /* update radar blips */
       const sharks = this.gameState.getSharks();
-      const foods = this.gameState.getFoods();
 
       // Find self in server data for angle
       let myAngle = 0;
@@ -580,8 +592,8 @@ export class GameScene extends Phaser.Scene {
         this.myRoute,
         this.myRoute === "attack"
           ? Array.from(sharks.entries()).map(([id, sv]) => ({ id, x: sv.x, y: sv.y }))
-          : [], // non-attack sharks don't see other sharks on radar
-        Array.from(foods.values()).map((fv) => ({ x: fv.x, y: fv.y, isRed: fv.isRed })),
+          : [],
+        Array.from(this.gameState.getFoods().values()).map((fv) => ({ x: fv.x, y: fv.y, isRed: fv.isRed })),
       );
 
       /* XP bar */

@@ -42,6 +42,7 @@ export class Shark extends Phaser.GameObjects.Container {
 
   /* backbone simulation */
   private spine: Phaser.Math.Vector2[] = [];
+  private ropePts: Phaser.Math.Vector2[] = [];
   private targetX = 0;
   private targetY = 0;
   private targetAngle = 0;
@@ -56,11 +57,11 @@ export class Shark extends Phaser.GameObjects.Container {
       this.spine.push(new Phaser.Math.Vector2(x, y));
     }
 
-    // Initialize with a straight line, will be updated immediately
-    const initialPts: Phaser.Math.Vector2[] = [];
+    // Pre-allocate rope points array (reused every frame)
     for (let i = 0; i < SEGMENT_COUNT; i++) {
-        initialPts.push(new Phaser.Math.Vector2(i * BASE_SPACING, 0));
+      this.ropePts.push(new Phaser.Math.Vector2(i * BASE_SPACING, 0));
     }
+    const initialPts = this.ropePts;
 
     this.territoryRenderer = new TerritoryRenderer(scene, -2);
 
@@ -182,7 +183,6 @@ export class Shark extends Phaser.GameObjects.Container {
     // Human mode: simple sprite movement
     if (this.route === "human" && this.humanSprite) {
       this.setPosition(this.targetX, this.targetY);
-      // Rotate sprite to face movement direction
       this.humanSprite.setRotation(angle);
     } else {
       // Shark mode: rope-based movement
@@ -195,44 +195,41 @@ export class Shark extends Phaser.GameObjects.Container {
         );
       }
 
-      /* trailing segments follow like a rope */
+      /* trailing segments follow like a rope (inlined math for perf) */
       for (let i = 4; i < SEGMENT_COUNT; i++) {
         const prev = this.spine[i - 1];
         const curr = this.spine[i];
-        const dist = Phaser.Math.Distance.BetweenPoints(prev, curr);
+        const dx = prev.x - curr.x;
+        const dy = prev.y - curr.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > BASE_SPACING) {
-          const a = Phaser.Math.Angle.BetweenPoints(curr, prev);
+          const a = Math.atan2(prev.y - curr.y, prev.x - curr.x);
           curr.x = prev.x - Math.cos(a) * BASE_SPACING;
           curr.y = prev.y - Math.sin(a) * BASE_SPACING;
         }
       }
 
-      /* compute display points (spine + wave offset) */
-      const pts: Phaser.Math.Vector2[] = [];
-
-      // Our image is facing RIGHT. Tail is at left (x=0), Head is at right (x=width).
-      // Rope with horizontal=true maps texture x=0 to pts[0], and x=width to pts[length-1].
-      // So pts[0] MUST be the TAIL, and pts[23] MUST be the HEAD.
-      // spine[0] is HEAD. spine[23] is TAIL.
+      /* compute display points (spine + wave offset) — reuse pre-allocated array */
+      let pIdx = 0;
       for (let i = SEGMENT_COUNT - 1; i >= 0; i--) {
         const sp = this.spine[i];
         let sa = this.targetAngle;
         if (i > 0) {
-          sa = Phaser.Math.Angle.BetweenPoints(this.spine[i], this.spine[i - 1]);
+          const dx = this.spine[i - 1].x - sp.x;
+          const dy = this.spine[i - 1].y - sp.y;
+          sa = Math.atan2(dy, dx);
         }
 
         const prog = i / (SEGMENT_COUNT - 1);
         const wave = this.waveAt(prog, t, i);
         const norm = sa + Math.PI / 2;
 
-        // Convert to local coordinates within the container
-        const lx = sp.x + Math.cos(norm) * wave - this.targetX;
-        const ly = sp.y + Math.sin(norm) * wave - this.targetY;
-
-        pts.push(new Phaser.Math.Vector2(lx, ly));
+        this.ropePts[pIdx].x = sp.x + Math.cos(norm) * wave - this.targetX;
+        this.ropePts[pIdx].y = sp.y + Math.sin(norm) * wave - this.targetY;
+        pIdx++;
       }
 
-      this.rope.setPoints(pts);
+      this.rope.setPoints(this.ropePts);
 
       this.setPosition(this.targetX, this.targetY);
     }
