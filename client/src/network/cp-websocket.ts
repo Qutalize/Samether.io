@@ -9,7 +9,7 @@ export class CPNetClient {
   private ws: WebSocket | null = null;
   private handlers: Array<(m: ServerMsg) => void> = [];
   private closeHandlers: Array<() => void> = [];
-
+ 
   connect(): Promise<void> {
     // 既存の接続があれば閉じる
     this.disconnect();
