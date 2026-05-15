@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { net } from "../../network/websocket";
 import { SharkRoute } from "../../network/protocol";
 import { loadCp } from "../../storage/cp";
 import { getSession, logout } from "../../storage/auth";
@@ -162,13 +161,7 @@ export class HomeScreen extends Phaser.Scene {
     });
   }
 
-  private async tryStart(): Promise<void> {
-    try {
-      if (!net.isOpen()) await net.connect();
-      net.send({ type: "join", payload: { name: this.playerName, route: this.selectedRoute } });
-      this.scene.start("GameScene", { name: this.playerName, route: this.selectedRoute });
-    } catch (e) {
-      console.error("connect failed", e);
-    }
+  private tryStart(): void {
+    this.scene.start("GameScene", { name: this.playerName, route: this.selectedRoute });
   }
 }

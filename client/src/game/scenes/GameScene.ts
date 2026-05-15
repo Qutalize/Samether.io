@@ -20,6 +20,7 @@ import { GameState } from "../state/GameState";
 import { TerritoryManager } from "../territory/TerritoryManager";
 import { SuctionEffect } from "../effects/SuctionEffect";
 import { getRouteColor } from "../config/RouteColors";
+import { styledButton } from "../../ui/styledButton";
 
 /* ── constants ─────────────────────────────────────────────── */
 const STAGE_ZOOMS = [1.0, 0.92, 0.84, 0.76, 0.68];
@@ -87,6 +88,16 @@ export class GameScene extends Phaser.Scene {
   /* audio */
   private bgm?: Phaser.Sound.BaseSound;
   private prevXp = 0;
+  private connectionOverlay!: Phaser.GameObjects.Container;
+  private connectionText!: Phaser.GameObjects.Text;
+  private retryButton!: Phaser.GameObjects.Text;
+  private isConnecting = false;
+  private isConnected = false;
+  private readonly resizeConnectionOverlay = (size: Phaser.Structs.Size) => {
+    this.layoutConnectionOverlay(size.width, size.height);
+  };
+  private readonly serverMessageHandler = (m: ServerMsg) => this.handleServer(m);
+  private readonly closeHandler = () => this.handleDisconnect();
 
   constructor() {
     super({ key: "GameScene" });
@@ -218,6 +229,21 @@ export class GameScene extends Phaser.Scene {
         this.bgm.play();
       }
     }
+
+      this.createConnectionOverlay();
+      this.showConnectionOverlay("接続中…");
+
+      net.onMessage(this.serverMessageHandler);
+      net.onClose(this.closeHandler);
+
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        net.offMessage(this.serverMessageHandler);
+        net.offClose(this.closeHandler);
+        this.scale.off("resize", this.resizeConnectionOverlay);
+        this.connectionOverlay?.destroy(true);
+      });
+
+      void this.connectAndJoin();
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -514,6 +540,80 @@ export class GameScene extends Phaser.Scene {
           this.territoryManager.handleMessage(m);
         }
         break;
+    }
+  }
+
+  private async connectAndJoin(): Promise<void> {
+    if (this.isConnecting || this.isConnected) {
+      return;
+    }
+
+    this.isConnecting = true;
+    this.showConnectionOverlay("接続中…");
+
+    try {
+      if (!net.isOpen()) {
+        await net.connect();
+      }
+
+      net.send({ type: "join", payload: { name: this.myName, route: this.myRoute } });
+      this.isConnected = true;
+      this.hideConnectionOverlay();
+    } catch (error) {
+      console.error("connect failed", error);
+      this.showConnectionOverlay("接続に失敗しました\n再接続してください");
+    } finally {
+      this.isConnecting = false;
+    }
+  }
+
+  private createConnectionOverlay(): void {
+    this.connectionOverlay = this.add.container(0, 0).setDepth(5000);
+
+    const backdrop = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.72).setOrigin(0);
+    this.connectionText = this.add.text(0, 0, "", {
+      fontFamily: "'Times New Roman', 'Georgia', serif",
+      fontSize: "22px",
+      color: "#88ccee",
+      align: "center",
+      letterSpacing: 3,
+    }).setOrigin(0.5);
+
+    this.retryButton = styledButton(this, "─  再接続  ─", "20px", "#44ff88", "#88ffbb", 0x22aa55, 8);
+    this.retryButton.on("pointerdown", () => void this.connectAndJoin());
+
+    this.connectionOverlay.add([backdrop, this.connectionText, this.retryButton]);
+    this.layoutConnectionOverlay(this.scale.width, this.scale.height);
+
+    this.scale.on("resize", this.resizeConnectionOverlay);
+  }
+
+  private layoutConnectionOverlay(width: number, height: number): void {
+    if (!this.connectionOverlay) {
+      return;
+    }
+
+    const backdrop = this.connectionOverlay.list[0] as Phaser.GameObjects.Rectangle;
+    backdrop.setSize(width, height);
+
+    this.connectionText.setPosition(width / 2, height * 0.45);
+    this.retryButton.setPosition(width / 2, height * 0.58);
+  }
+
+  private showConnectionOverlay(message: string): void {
+    this.connectionText.setText(message);
+    this.connectionOverlay.setVisible(true);
+    this.layoutConnectionOverlay(this.scale.width, this.scale.height);
+  }
+
+  private hideConnectionOverlay(): void {
+    this.connectionOverlay.setVisible(false);
+  }
+
+  private handleDisconnect(): void {
+    this.isConnected = false;
+    if (this.scene.isActive()) {
+      this.showConnectionOverlay("接続が切れました\n再接続してください");
     }
   }
 
