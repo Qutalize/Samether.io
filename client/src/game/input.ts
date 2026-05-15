@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-
+ 
 export class InputController {
   private scene: Phaser.Scene;
   private dashBtn!: Phaser.GameObjects.Container;

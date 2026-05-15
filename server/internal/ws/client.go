@@ -71,7 +71,7 @@ func (c *Client) writePump() {
 		ticker.Stop()
 		_ = c.conn.Close()
 	}()
-
+ 
 	for {
 		select {
 		case msg, ok := <-c.send:
