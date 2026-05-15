@@ -37,7 +37,7 @@ jobs:
           echo "image=$ECR_URI:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Render task definition
-        id: render
+        id: renderA
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: infra/envs/dev/task-definition.json
