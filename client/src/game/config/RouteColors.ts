@@ -6,7 +6,7 @@
  */
 
 import type { SharkRoute } from "../../network/protocol";
- 
+
 export const ROUTE_COLORS: Record<SharkRoute, number> = {
   "attack": 0xff6666,     // Red
   "non-attack": 0x66ccff, // Blue
