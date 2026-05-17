@@ -23,7 +23,7 @@
         { "name": "ROOM_CAPACITY",         "value": "50" },
         { "name": "REDIS_ADDR",            "value": "master.samether-dev-redis.dpdgsf.apne1.cache.amazonaws.com" },
         { "name": "LOCATION_TRACKER_NAME", "value": "samether-dev-tracker" },
-        { "name": "ALLOWED_ORIGIN",        "value": "https://d1tbm2glcs93io.cloudfront.net" } 
+        { "name": "ALLOWED_ORIGIN",        "value": "https://d3alzhc0i99k6i.cloudfront.net" } 
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
