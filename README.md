@@ -1,6 +1,10 @@
-# Samezario (サメザリオ)
+# Samezar.io (サメザリオ)
 
 リアルタイム位置情報連動型マルチプレイヤーゲーム - Slither.io inspired shark evolution game
+
+<p align="center">
+  <img src="images/AllinOne.png" alt="Samezar.io" width="600">
+</p>
 
 ## Overview
 
