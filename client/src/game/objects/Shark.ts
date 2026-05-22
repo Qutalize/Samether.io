@@ -6,7 +6,7 @@ import { getRouteColor } from "../config/RouteColors";
 /* ── colours tuned to look like semi-transparent grey
       silhouettes against the dark ocean ──────────────────── */
 const BODY_COLORS = [0x708898, 0x668090, 0x5c7488, 0x526880, 0x485c78];
-const SIZE_SCALES = [1.3, 1.45, 1.6, 1.8, 2.05];
+const SIZE_SCALES = [1.55, 1.75, 1.90, 2.15, 2.45];
 
 function resolveSharkTextureKey(stage: number, route: SharkRoute): string {
   if (route === "human") return "diver"; // Human uses diver sprite
