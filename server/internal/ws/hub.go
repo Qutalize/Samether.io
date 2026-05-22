@@ -460,7 +460,7 @@ func (h *Hub) step(dt float64) {
 
 	h.leaderboard.BeginTick()
 	for id, s := range h.world.Sharks {
-		if s.Alive {
+		if s.Alive && !s.IsBot {
 			h.leaderboard.Record(id, s.Name, s.XP)
 		}
 	}
