@@ -24,6 +24,11 @@ const (
 	DashMultiplier  = 2.0
 	DashDurationSec = 1.0
 
+	// CP System
+	InitialCP    = 50.0 // ゲーム開始時のCP
+	MaxCPDefault = 100.0
+	DashCPPerSec = 1.0 // ダッシュ消費レート（1秒あたりCP）。調整はここだけでOK
+
 	SegmentSpacing    = 5.5
 	CollisionHeadRad  = 8.0
 	CollisionBodyRad  = 9.0
@@ -201,6 +206,19 @@ func NewWorld() *World {
 	return &World{
 		Sharks: make(map[string]*Shark),
 		Foods:  make(map[string]*Food),
+	}
+}
+
+// AddCP adds CP to a shark's in-game balance, capped at MaxCP.
+// Called by Hub when a GPS session result arrives.
+func (w *World) AddCP(playerID string, amount float64) {
+	s, ok := w.Sharks[playerID]
+	if !ok {
+		return
+	}
+	s.CP += amount
+	if s.CP > s.MaxCP {
+		s.CP = s.MaxCP
 	}
 }
 

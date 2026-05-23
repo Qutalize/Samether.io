@@ -34,7 +34,10 @@ type Shark struct {
 	Territories        [][]Vec // closed polygons formed when trail self-intersects
 	XP                 int
 	Stage              int // zero-based index into Stages
-	DashUntilTick      int64
+	CP                 float64 // 現在のチャージポイント（ダッシュ消費用）
+	MaxCP              float64 // 最大チャージポイント
+	WantDash           bool    // プレイヤーがダッシュボタンを押しているか
+	DashUntilTick      int64   // 将来のボット向け拡張用（現在未使用）
 	SpeedBoostUntilTick int64
 	Alive              bool
 	IsBot              bool
@@ -54,6 +57,8 @@ func NewShark(id, name string, spawn Vec) *Shark {
 		TargetAngle: 0,
 		XP:          0,
 		Stage:       0,
+		CP:          InitialCP,
+		MaxCP:       MaxCPDefault,
 		Alive:       true,
 		Trail:       []Vec{spawn},
 	}
@@ -169,5 +174,22 @@ func (s *Shark) UpdateStage() {
 			Y: tail.Y - math.Sin(s.Angle)*spacing,
 		}
 		s.Segments = append(s.Segments, tail)
+	}
+}
+
+// DashCPScale returns the CP consumption multiplier for a given route.
+// Tune these values to adjust balance between routes.
+func DashCPScale(route string) float64 {
+	switch route {
+	case RouteAttack:
+		return 2.0 // 攻撃系: 消費大
+	case RouteNonAttack:
+		return 1.0 // 非攻撃系: 消費小
+	case RouteDeepSea:
+		return 1.5 // 深海: 中程度
+	case RouteHuman:
+		return 1.0 // ヒト: 通常
+	default:
+		return 1.0
 	}
 }

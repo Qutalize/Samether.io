@@ -242,6 +242,11 @@ func (h *Hub) Run() {
 
 		case result := <-h.cpHandler.ResultChan():
 			h.sendToPlayer(result.PlayerID, result.MsgType, result.Payload)
+			if result.MsgType == "cp_result" {
+				if earned, ok := result.Payload.(cp.CPResultPayload); ok {
+					h.world.AddCP(result.PlayerID, float64(earned.Earned))
+				}
+			}
 
 		case <-cpCleanup.C:
 			if h.cpHandler != nil {
@@ -303,6 +308,12 @@ func (h *Hub) handleInbound(m inboundMsg) {
 		if !isCPOnly {
 			s := game.NewShark(id, p.Name, randomSpawn())
 			s.Route = game.NormalizeRoute(p.Route)
+			// CPStoreに残高があればそれをゲーム内CPとして引き継ぐ（MaxCPでキャップ）
+			if h.cpHandler != nil {
+				if balance := h.cpHandler.Balance(id); balance > 0 {
+					s.CP = min(float64(balance), s.MaxCP)
+				}
+			}
 			h.world.Sharks[id] = s
 		}
 
@@ -332,9 +343,7 @@ func (h *Hub) handleInbound(m inboundMsg) {
 		}
 
 		s.TargetAngle = p.Angle
-		if p.Dash {
-			s.DashUntilTick = h.world.Tick + int64(float64(game.TickHz)*game.DashDurationSec)
-		}
+		s.WantDash = p.Dash
 
 		if s.TrailActive && !p.Draw {
 			s.Trail = nil
@@ -408,8 +417,15 @@ func (h *Hub) step(dt float64) {
 		if !s.Alive {
 			continue
 		}
-		dash := h.world.Tick <= s.DashUntilTick
+		dash := s.WantDash && s.CP > 0
 		s.Move(dt, dash)
+		if dash {
+			consume := game.DashCPPerSec / float64(game.TickHz) * game.DashCPScale(s.Route)
+			s.CP -= consume
+			if s.CP < 0 {
+				s.CP = 0
+			}
+		}
 	}
 
 	wallDead := h.world.CheckWallDeaths()
@@ -598,7 +614,7 @@ func (h *Hub) sendStateTo(c *Client) {
 		payload := StatePayload{
 			Tick:   h.world.Tick,
 			Full:   true,
-			You:    StateYou{CP: 50},
+			You:    StateYou{CP: int(game.InitialCP), MaxCP: int(game.MaxCPDefault)},
 			Sharks: []StateSharkView{},
 			Foods:  []StateFoodView{},
 		}
@@ -668,7 +684,8 @@ func (h *Hub) sendStateTo(c *Client) {
 			Y:     self.Head.Y,
 			XP:    self.XP,
 			Stage: self.Stage,
-			CP:    50,
+			CP:    int(self.CP),
+			MaxCP: int(self.MaxCP),
 		},
 	}
 

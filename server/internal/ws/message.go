@@ -116,6 +116,7 @@ type StateYou struct {
 	XP    int     `json:"xp"`
 	Stage int     `json:"stage"`
 	CP    int     `json:"cp,omitempty"`
+	MaxCP int     `json:"maxCp,omitempty"`
 }
 
 // ============================================================
