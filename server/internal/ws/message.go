@@ -115,6 +115,7 @@ type StateYou struct {
 	Y     float64 `json:"y"`
 	XP    int     `json:"xp"`
 	Stage int     `json:"stage"`
+	CP    int     `json:"cp,omitempty"`
 }
 
 // ============================================================

@@ -50,7 +50,23 @@ export class GameScene extends Phaser.Scene {
   private gameState!: GameState;
 
   /* input */
-  private input2!: InputController;
+  private isMobile = false;
+  private isDead = false;
+  private joystickAngle = 0;
+  private isDashBtnDown = false;
+  private isTerritoryBtnDown = false;
+  private joystickPointerId = -1;
+  private dashPointerId = -1;
+  private territoryPointerId = -1;
+  private joystickBase!: Phaser.GameObjects.Graphics;
+  private joystickThumb!: Phaser.GameObjects.Graphics;
+  private dashMobileBtn!: Phaser.GameObjects.Container;
+  private territoryMobileBtn!: Phaser.GameObjects.Container;
+  private joystickTouchZone!: Phaser.GameObjects.Zone;
+  private joystickCenterX = 0;
+  private joystickCenterY = 0;
+  private joystickRadius = 56;
+  private input2?: InputController;
 
   /* layers */
   private bgContainer!: Phaser.GameObjects.Container;
@@ -97,6 +113,11 @@ export class GameScene extends Phaser.Scene {
     this.myRoute = data.route;
   }
 
+  private isTouchDevice(): boolean {
+    const nav = globalThis.navigator;
+    return !this.sys.game.device.os.desktop || (nav?.maxTouchPoints ?? 0) > 0;
+  }
+
   preload(): void {
     this.load.image("shark",           "images/shark.png");
     this.load.image("shark_mako",      "images/shark_mako.png");
@@ -119,6 +140,11 @@ export class GameScene extends Phaser.Scene {
   /*  CREATE                                                  */
   /* ════════════════════════════════════════════════════════ */
   create(): void {
+    this.isMobile = !this.sys.game.device.os.desktop && this.isTouchDevice();
+
+    // ★マルチタッチを明示的に有効化（デフォルト2本 + 追加2本 = 最大4本）
+    this.input.addPointer(2);
+
     // Register custom shader pipeline for Phaser 3.80
     const renderer = this.renderer as any;
     if (renderer.pipelines && !renderer.pipelines.get("SharkShader")) {
@@ -161,8 +187,12 @@ export class GameScene extends Phaser.Scene {
     this.uiContainer.add(this.vignetteOverlay);
 
     /* input controller */
-    this.input2 = new InputController(this);
-    this.uiContainer.add(this.input2.getContainer());
+    if (this.isMobile) {
+      this.createMobileUI();
+    } else {
+      this.input2 = new InputController(this);
+      this.uiContainer.add(this.input2.getContainer());
+    }
 
     /* ── HUD ────────────────── */
     this.xpBar = new XpBar(this, this.uiContainer, this.myRoute);
@@ -191,6 +221,9 @@ export class GameScene extends Phaser.Scene {
         this.vignetteOverlay.setPosition(sz.width / 2, sz.height / 2);
         const md = Math.max(sz.width, sz.height);
         this.vignetteOverlay.setDisplaySize(md * 1.5, md * 1.5);
+      }
+      if (this.isMobile) {
+        this.layoutMobileUI(sz.width, sz.height);
       }
     });
 
@@ -423,7 +456,8 @@ export class GameScene extends Phaser.Scene {
   /*  TRAIL                                                   */
   /* ════════════════════════════════════════════════════════ */
   private updateTrail(): void {
-    if (!ENABLE_TRAIL_ON_HOLD || !this.input.activePointer.isDown) {
+    const isDrawing = this.isMobile ? this.isTerritoryBtnDown : this.input.activePointer.isDown;
+    if (!ENABLE_TRAIL_ON_HOLD || !isDrawing) {
       this.clearTrail();
       return;
     }
@@ -488,13 +522,37 @@ export class GameScene extends Phaser.Scene {
   /* ════════════════════════════════════════════════════════ */
   private sendInput(): void {
     if (!net.isOpen()) return;
-    const angle = this.input2.pointerAngle();
-    const dash = this.input2.isDashDown();
-    const draw = this.input.activePointer.isDown;
+
+    let angle = 0;
+    let dash = false;
+    let draw = false;
+
+    if (this.isMobile) {
+      // モバイル用の操作（ジョイスティックと専用ボタン）
+      angle = this.joystickPointerId !== -1 ? this.joystickAngle : 0;
+      dash = this.isDashBtnDown;
+      draw = this.isTerritoryBtnDown;
+    } else {
+      // PC用の操作（カーソル方向、スペースキー、マウスクリック長押し）
+      angle = this.input2 ? this.input2.pointerAngle() : 0;
+
+      const spaceKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      dash = spaceKey ? spaceKey.isDown : false;
+
+      draw = this.input.activePointer.isDown;
+    }
+
     net.send({ type: "input", payload: { angle, dash, draw } });
   }
 
+  private getPointerId(pointer: Phaser.Input.Pointer): number {
+    const anyPointer = pointer as Phaser.Input.Pointer & { id?: number; pointerId?: number };
+    return anyPointer.id ?? anyPointer.pointerId ?? -1;
+  }
+
   private handleServer(m: ServerMsg): void {
+    if (this.isDead) return;
+
     switch (m.type) {
       case "welcome":
         this.onWelcome(m.payload);
@@ -603,7 +661,7 @@ export class GameScene extends Phaser.Scene {
         }
         this.prevXp = m.you.xp;
       }
-      this.xpBar.update(m.you.xp, m.you.stage, this.myRoute);
+      this.xpBar.update(m.you.xp, m.you.stage, this.myRoute, m.you.cp ?? 0);
 
       /* Update territory manager and GameState when level changes */
       if (m.you.stage !== previousStage) {
@@ -621,6 +679,190 @@ export class GameScene extends Phaser.Scene {
         this.myStage = m.you.stage;
       }
     }
+  }
+
+  private createMobileUI(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+
+    this.joystickTouchZone = this.add.zone(width * 0.5, 0, width * 0.5, height).setOrigin(0, 0);
+    this.joystickTouchZone.setScrollFactor(0);
+    this.joystickTouchZone.setDepth(1001);
+    this.joystickTouchZone.setInteractive();
+
+    this.joystickTouchZone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      this.joystickPointerId = this.getPointerId(pointer);
+      this.updateJoystickFromPointer(pointer.x, pointer.y);
+    });
+    this.joystickTouchZone.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      if (pointer.isDown && this.getPointerId(pointer) === this.joystickPointerId) {
+        this.updateJoystickFromPointer(pointer.x, pointer.y);
+      }
+    });
+    this.joystickTouchZone.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      if (this.getPointerId(pointer) !== this.joystickPointerId) {
+        return;
+      }
+      this.joystickPointerId = -1;
+      this.joystickAngle = 0;
+      this.drawJoystickThumb();
+    });
+    this.joystickTouchZone.on("pointerout", (pointer: Phaser.Input.Pointer) => {
+      if (this.getPointerId(pointer) !== this.joystickPointerId) {
+        return;
+      }
+      this.joystickPointerId = -1;
+      this.joystickAngle = 0;
+      this.drawJoystickThumb();
+    });
+
+    const buttonStyle = {
+      fill: 0x0c1a24,
+      fillAlpha: 0.86,
+      stroke: 0x88bbcc,
+      strokeAlpha: 0.65,
+      textColor: "#dceeff",
+    };
+
+    const sizeScale = Phaser.Math.Clamp(Math.min(width, height) / 900, 0.8, 1.0);
+    const mobileBtnRadius = Math.round(56 * 0.8 * sizeScale);
+    this.dashMobileBtn = this.createMobileCircleButton(0, 0, mobileBtnRadius, "DASH", buttonStyle);
+    this.dashMobileBtn.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      this.dashPointerId = this.getPointerId(pointer);
+      this.isDashBtnDown = true;
+    });
+    const resetDash = (pointer: Phaser.Input.Pointer) => {
+      if (this.getPointerId(pointer) !== this.dashPointerId) {
+        return;
+      }
+      this.dashPointerId = -1;
+      this.isDashBtnDown = false;
+    };
+    this.dashMobileBtn.on("pointerup", resetDash);
+    this.dashMobileBtn.on("pointerout", resetDash);
+
+    this.territoryMobileBtn = this.createMobileCircleButton(0, 0, mobileBtnRadius, "TRAIL", buttonStyle);
+    this.territoryMobileBtn.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      this.territoryPointerId = this.getPointerId(pointer);
+      this.isTerritoryBtnDown = true;
+    });
+    const resetTerritory = (pointer: Phaser.Input.Pointer) => {
+      if (this.getPointerId(pointer) !== this.territoryPointerId) {
+        return;
+      }
+      this.territoryPointerId = -1;
+      this.isTerritoryBtnDown = false;
+    };
+    this.territoryMobileBtn.on("pointerup", resetTerritory);
+    this.territoryMobileBtn.on("pointerout", resetTerritory);
+
+    this.joystickBase = this.add.graphics();
+    this.joystickThumb = this.add.graphics();
+
+    this.uiContainer.add([this.dashMobileBtn, this.territoryMobileBtn, this.joystickBase, this.joystickThumb]);
+    this.layoutMobileUI(width, height);
+  }
+
+  private createMobileCircleButton(
+    x: number,
+    y: number,
+    radius: number,
+    label: string,
+    style: { fill: number; fillAlpha: number; stroke: number; strokeAlpha: number; textColor: string },
+  ): Phaser.GameObjects.Container {
+    const container = this.add.container(x, y);
+    container.setScrollFactor(0);
+    container.setDepth(1001);
+
+    const outer = this.add.circle(0, 0, radius + 6, style.fill, 0.12).setOrigin(0.5);
+    const circle = this.add.circle(0, 0, radius, style.fill, style.fillAlpha).setOrigin(0.5);
+    circle.setStrokeStyle(3, style.stroke, style.strokeAlpha);
+    const text = this.add.text(0, 0, label, {
+      fontFamily: "system-ui, sans-serif",
+      fontSize: "14px",
+      fontStyle: "bold",
+      color: style.textColor,
+      align: "center",
+    }).setOrigin(0.5);
+
+    container.add([outer, circle, text]);
+    container.setSize(radius * 2, radius * 2);
+
+    container.setInteractive({
+      hitArea: new Phaser.Geom.Circle(radius, radius, radius),
+      hitAreaCallback: Phaser.Geom.Circle.Contains,
+      useHandCursor: true,
+    });
+
+    return container;
+  }
+
+  private layoutMobileUI(width: number, height: number): void {
+    const buttonScale = Phaser.Math.Clamp(Math.min(width, height) / 900, 0.8, 1.0);
+    const leftMargin = Math.max(48, Math.round(width * 0.08));
+    const dashX = leftMargin;
+    const territoryX = leftMargin;
+    const territoryY = Math.round(height * 0.74);
+    const dashY = Math.round(height * 0.88);
+    const joystickX = width - Math.round(118 * buttonScale);
+    const joystickY = height - Math.round(118 * buttonScale);
+
+    this.territoryMobileBtn?.setPosition(territoryX, territoryY);
+    this.dashMobileBtn?.setPosition(dashX, dashY);
+
+    this.joystickCenterX = joystickX;
+    this.joystickCenterY = joystickY;
+    this.joystickRadius = Math.round(56 * 0.8 * buttonScale);
+
+    if (this.joystickTouchZone) {
+      this.joystickTouchZone.setPosition(width * 0.5, 0);
+      this.joystickTouchZone.setSize(width * 0.5, height);
+    }
+
+    if (this.joystickBase) {
+      this.joystickBase.clear();
+      this.joystickBase.fillStyle(0x09141d, 0.72);
+      this.joystickBase.fillCircle(joystickX, joystickY, this.joystickRadius + 18);
+      this.joystickBase.lineStyle(3, 0x6cbad0, 0.7);
+      this.joystickBase.strokeCircle(joystickX, joystickY, this.joystickRadius + 10);
+      this.joystickBase.lineStyle(1, 0x244456, 0.55);
+      this.joystickBase.strokeCircle(joystickX, joystickY, this.joystickRadius - 4);
+    }
+
+    this.drawJoystickThumb();
+  }
+
+  private drawJoystickThumb(pointerX?: number, pointerY?: number): void {
+    if (!this.joystickThumb) return;
+
+    let thumbX = this.joystickCenterX;
+    let thumbY = this.joystickCenterY;
+
+    if (typeof pointerX === "number" && typeof pointerY === "number") {
+      thumbX = pointerX;
+      thumbY = pointerY;
+    }
+
+    this.joystickThumb.clear();
+    this.joystickThumb.fillStyle(0x88e7ff, 0.6);
+    this.joystickThumb.fillCircle(thumbX, thumbY, 18);
+    this.joystickThumb.lineStyle(2, 0xe5fbff, 0.8);
+    this.joystickThumb.strokeCircle(thumbX, thumbY, 18);
+  }
+
+  private updateJoystickFromPointer(pointerX: number, pointerY: number): void {
+    const dx = pointerX - this.joystickCenterX;
+    const dy = pointerY - this.joystickCenterY;
+    const distance = Math.sqrt((dx * dx) + (dy * dy));
+    const maxDistance = this.joystickRadius;
+    const scale = distance > maxDistance && distance > 0 ? maxDistance / distance : 1;
+
+    this.joystickAngle = Math.atan2(dy, dx);
+
+    const clampedX = this.joystickCenterX + dx * scale;
+    const clampedY = this.joystickCenterY + dy * scale;
+
+    this.drawJoystickThumb(clampedX, clampedY);
   }
 
   // 餌の更新時にエフェクトを表示（ジンベエザメ専用）
@@ -644,11 +886,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onDeath(m: DeathPayload): void {
+    this.isDead = true;
+
     // Play scream sound for human mode
     if (this.myRoute === "human") {
       this.sound.play("human_scream", { volume: 0.8 });
     }
-    this.scene.start("DeathScreen", { score: m.score, stage: m.stage, route: this.myRoute });
+    this.scene.pause();
+    this.scene.launch("DeathScreen", { score: m.score, stage: m.stage, route: this.myRoute });
   }
 
   private onLeaderboard(m: LeaderboardPayload): void {

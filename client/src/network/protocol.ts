@@ -57,6 +57,7 @@ export interface StateYou {
   y: number;
   xp: number;
   stage: number;
+  cp?: number;
 }
 
 export interface StatePayload {

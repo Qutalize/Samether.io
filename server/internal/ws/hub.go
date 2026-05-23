@@ -598,7 +598,7 @@ func (h *Hub) sendStateTo(c *Client) {
 		payload := StatePayload{
 			Tick:   h.world.Tick,
 			Full:   true,
-			You:    StateYou{},
+			You:    StateYou{CP: 50},
 			Sharks: []StateSharkView{},
 			Foods:  []StateFoodView{},
 		}
@@ -668,6 +668,7 @@ func (h *Hub) sendStateTo(c *Client) {
 			Y:     self.Head.Y,
 			XP:    self.XP,
 			Stage: self.Stage,
+			CP:    50,
 		},
 	}
 

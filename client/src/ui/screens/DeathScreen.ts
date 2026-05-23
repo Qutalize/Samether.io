@@ -15,6 +15,7 @@ export class DeathScreen extends Phaser.Scene {
   private stage = 0;
   private route: SharkRoute = "attack";
   private deathSound?: Phaser.Sound.BaseSound;
+  private textBg!: Phaser.GameObjects.Graphics;
   private overlay!: Phaser.GameObjects.Graphics;
   private lineTop!: Phaser.GameObjects.Graphics;
   private lineBot!: Phaser.GameObjects.Graphics;
@@ -58,9 +59,19 @@ export class DeathScreen extends Phaser.Scene {
     this.overlay.setAlpha(0);
     this.tweens.add({
       targets: this.overlay,
-      alpha: 0.85,
+      alpha: 0.5,
       duration: 1200,
       ease: "Power2",
+    });
+
+    this.textBg = this.add.graphics();
+    this.textBg.setAlpha(0);
+    this.tweens.add({
+      targets: this.textBg,
+      alpha: 1,
+      duration: 800,
+      delay: 600,
+      ease: "Power1",
     });
 
     this.lineTop = this.add.graphics();
@@ -120,7 +131,10 @@ export class DeathScreen extends Phaser.Scene {
     });
 
     this.returnBtn = styledButton(this, "─  ホームへ戻る  ─", "20px", "#665544", "#ccaa88", 0x665544, 6);
-    this.returnBtn.setAlpha(0).on("pointerdown", () => this.scene.start("HomeScreen"));
+    this.returnBtn.setAlpha(0).on("pointerdown", () => {
+      this.scene.stop("GameScene");
+      this.scene.start("HomeScreen");
+    });
 
     this.tweens.add({
       targets: this.returnBtn,
@@ -144,7 +158,7 @@ export class DeathScreen extends Phaser.Scene {
 
   private layout(width: number, height: number): void {
     this.overlay.clear();
-    this.overlay.fillStyle(0x000000, 1);
+    this.overlay.fillStyle(0x000000, 0.5);
     this.overlay.fillRect(0, 0, width, height);
 
     const lineY1 = height * 0.42;
@@ -165,6 +179,12 @@ export class DeathScreen extends Phaser.Scene {
     this.lineBot.moveTo(lineX, lineY2);
     this.lineBot.lineTo(lineX + lineW, lineY2);
     this.lineBot.strokePath();
+
+    const textBandTop = Math.max(0, lineY1 - 70);
+    const textBandBottom = Math.min(height, height * 0.86);
+    this.textBg.clear();
+    this.textBg.fillStyle(0x000000, 0.85);
+    this.textBg.fillRect(0, textBandTop, width, textBandBottom - textBandTop);
 
     this.diedText.setPosition(width / 2, height * 0.5);
     this.infoText.setPosition(width / 2, height * 0.65);

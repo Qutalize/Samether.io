@@ -9,7 +9,6 @@ export class InputController {
   private bgCircle!: Phaser.GameObjects.Arc;
   private outerRing!: Phaser.GameObjects.Arc;
   private labelText!: Phaser.GameObjects.Text;
-  private cpGfx!: Phaser.GameObjects.Graphics;
 
   /* CP (stamina) constants */
   private static readonly CP_MAX = 100;
@@ -56,9 +55,6 @@ export class InputController {
     this.bgCircle = this.scene.add.circle(0, 0, 44, 0x0c1a24, 0.85);
     this.bgCircle.setStrokeStyle(1.5, 0x3a5868, 0.45);
 
-    /* CP Gauge */
-    this.cpGfx = this.scene.add.graphics();
-
     /* text label */
     this.labelText = this.scene.add.text(0, 0, "DASH\n[SPACE]", {
       fontFamily: "system-ui, sans-serif",
@@ -69,7 +65,7 @@ export class InputController {
     });
     this.labelText.setOrigin(0.5);
 
-    c.add([glow, this.outerRing, this.bgCircle, this.cpGfx, this.labelText]);
+    c.add([glow, this.outerRing, this.bgCircle, this.labelText]);
     c.setSize(104, 104);
     c.setInteractive(
       new Phaser.Geom.Circle(0, 0, 54),
@@ -99,7 +95,6 @@ export class InputController {
     });
 
     this.dashBtn = c;
-    this.renderCpGauge(1.0);
   }
 
   private updateVisualState(): void {
@@ -172,32 +167,7 @@ export class InputController {
       this.cp = Math.min(InputController.CP_MAX, this.cp + InputController.CP_RECOVER_RATE * (delta / 1000));
     }
 
-    this.renderCpGauge(this.cp / InputController.CP_MAX);
     this.updateVisualState();
-  }
-
-  /** Render the CP arc gauge around the dash button. */
-  private renderCpGauge(ratio: number): void {
-    ratio = Math.max(0, Math.min(1, ratio));
-
-    this.cpGfx.clear();
-    if (ratio <= 0) return;
-
-    const r = 54;
-    const originAngle = Math.PI / 2; // Bottom
-    const span = Math.PI * ratio;
-
-    this.cpGfx.lineStyle(5, 0x44ddff, 1);
-    
-    // Draw right arc (from bottom upwards to the right side of the screen)
-    this.cpGfx.beginPath();
-    this.cpGfx.arc(0, 0, r, originAngle, originAngle - span, true);
-    this.cpGfx.strokePath();
-
-    // Draw left arc
-    this.cpGfx.beginPath();
-    this.cpGfx.arc(0, 0, r, originAngle, originAngle + span, false);
-    this.cpGfx.strokePath();
   }
 }
 

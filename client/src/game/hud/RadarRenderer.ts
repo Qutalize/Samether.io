@@ -15,7 +15,9 @@ export interface RadarBlip {
 
 export class RadarRenderer implements HudComponent {
   private gfx: Phaser.GameObjects.Graphics;
-  private scaleManager: Phaser.Scale.ScaleManager;
+  private isMobile = false;
+  private originX = 0;
+  private originY = 0;
 
   private sweep = 0;
   private myId = "";
@@ -26,10 +28,16 @@ export class RadarRenderer implements HudComponent {
   private sharks: RadarBlip[] = [];
   private foods: { x: number; y: number; isRed?: boolean }[] = [];
 
+  private static isTouchDevice(scene: Phaser.Scene): boolean {
+    const nav = globalThis.navigator;
+    return !scene.sys.game.device.os.desktop || (nav?.maxTouchPoints ?? 0) > 0;
+  }
+
   constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
-    this.scaleManager = scene.scale;
+    this.isMobile = RadarRenderer.isTouchDevice(scene);
     this.gfx = scene.add.graphics();
     container.add(this.gfx);
+    this.updateOrigin(scene.scale.width, scene.scale.height);
     scene.scale.on("resize", (sz: Phaser.Structs.Size) => this.resize(sz));
   }
 
@@ -60,9 +68,9 @@ export class RadarRenderer implements HudComponent {
     const g = this.gfx;
     g.clear();
 
-    const cx = RADAR_M + RADAR_R;
-    const cy = this.scaleManager.height - RADAR_M - RADAR_R;
-    const r = RADAR_R;
+    const cx = this.originX;
+    const cy = this.originY;
+    const r = this.isMobile ? Math.round(RADAR_R * 0.8) : RADAR_R;
 
     /* dark circle background */
     g.fillStyle(0x040e18, 0.85);
@@ -170,8 +178,19 @@ export class RadarRenderer implements HudComponent {
     g.fillTriangle(tipX, tipY, lx, ly, rx, ry);
   }
 
-  resize(_sz: Phaser.Structs.Size): void {
-    /* Radar position is recalculated from scaleManager.height each draw */
+  resize(sz: Phaser.Structs.Size): void {
+    this.updateOrigin(sz.width, sz.height);
+  }
+
+  private updateOrigin(width: number, height: number): void {
+    if (this.isMobile) {
+      this.originX = width - RADAR_M - RADAR_R;
+      this.originY = RADAR_M + RADAR_R;
+      return;
+    }
+
+    this.originX = RADAR_M + RADAR_R;
+    this.originY = height - RADAR_M - RADAR_R;
   }
 
   destroy(): void {
