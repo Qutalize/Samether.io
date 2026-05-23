@@ -159,11 +159,11 @@ type StageDef struct {
 }
 
 var Stages = []StageDef{
-	{XPRequired: 0,   SegmentCount: 24, SizeScale: 1.3},
-	{XPRequired: 10,  SegmentCount: 24, SizeScale: 1.625},
-	{XPRequired: 25,  SegmentCount: 24, SizeScale: 2.015},
-	{XPRequired: 50,  SegmentCount: 24, SizeScale: 2.47},
-	{XPRequired: 100, SegmentCount: 24, SizeScale: 2.99},
+	{XPRequired: 0,   SegmentCount: 24, SizeScale: 1.55},
+	{XPRequired: 10,  SegmentCount: 24, SizeScale: 1.75},
+	{XPRequired: 25,  SegmentCount: 24, SizeScale: 1.90},
+	{XPRequired: 50,  SegmentCount: 24, SizeScale: 2.15},
+	{XPRequired: 100, SegmentCount: 24, SizeScale: 2.45},
 }
 
 // StageFromXP returns zero-based stage index for accumulated XP.
