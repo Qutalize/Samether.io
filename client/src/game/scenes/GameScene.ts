@@ -103,12 +103,29 @@ export class GameScene extends Phaser.Scene {
   /* audio */
   private bgm?: Phaser.Sound.BaseSound;
   private prevXp = 0;
+  private spaceKey?: Phaser.Input.Keyboard.Key;
+  private serverMessageHandler = (m: ServerMsg) => this.handleServer(m);
+  private resizeHandler?: (size: Phaser.Structs.Size) => void;
+  private addedPointers = false;
 
   constructor() {
     super({ key: "GameScene" });
   }
 
   init(data: { name: string; route: SharkRoute }): void {
+    this.isDead = false;
+    this.joystickPointerId = -1;
+    this.dashPointerId = -1;
+    this.territoryPointerId = -1;
+    this.isDashBtnDown = false;
+    this.isTerritoryBtnDown = false;
+    this.joystickAngle = 0;
+    this.myId = "";
+    this.myStage = -1;
+    this.isWhaleShark = false;
+    this.prevXp = 0;
+    this.pointerTrail = [];
+    this.spaceKey = undefined;
     this.myName = data.name;
     this.myRoute = data.route;
   }
@@ -143,7 +160,10 @@ export class GameScene extends Phaser.Scene {
     this.isMobile = !this.sys.game.device.os.desktop && this.isTouchDevice();
 
     // ★マルチタッチを明示的に有効化（デフォルト2本 + 追加2本 = 最大4本）
-    this.input.addPointer(2);
+    if (!this.addedPointers) {
+      this.input.addPointer(2);
+      this.addedPointers = true;
+    }
 
     // Register custom shader pipeline for Phaser 3.80
     const renderer = this.renderer as any;
@@ -160,6 +180,7 @@ export class GameScene extends Phaser.Scene {
     this.bgContainer = this.add.container(0, 0).setDepth(-1000);
     this.worldContainer = this.add.container(0, 0);
     this.uiContainer = this.add.container(0, 0).setDepth(1000);
+    this.worldContainer.setVisible(false);
 
     /* Background Shader */
     this.bgShader = this.add.shader("OceanBackground", this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height);
@@ -211,7 +232,7 @@ export class GameScene extends Phaser.Scene {
     this.uiCamera.ignore(this.bgContainer);
 
     /* resize */
-    this.scale.on("resize", (sz: Phaser.Structs.Size) => {
+    this.resizeHandler = (sz: Phaser.Structs.Size) => {
       this.uiCamera.setSize(sz.width, sz.height);
       if (this.bgShader) {
         this.bgShader.setSize(sz.width, sz.height);
@@ -225,7 +246,8 @@ export class GameScene extends Phaser.Scene {
       if (this.isMobile) {
         this.layoutMobileUI(sz.width, sz.height);
       }
-    });
+    };
+    this.scale.on("resize", this.resizeHandler);
 
     /* entity state manager – wires new Phaser objects into worldContainer */
     this.gameState = new GameState(
@@ -237,12 +259,17 @@ export class GameScene extends Phaser.Scene {
     );
 
     /* network */
-    net.onMessage((m) => this.handleServer(m));
+    net.onMessage(this.serverMessageHandler);
+    if (!this.spaceKey) {
+      this.spaceKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    }
     this.time.addEvent({
       delay: 50,
       loop: true,
       callback: () => this.sendInput(),
     });
+
+    this.events.on(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
     /* audio */
     if (this.sound && this.cache.audio.exists("bgm")) {
@@ -536,8 +563,7 @@ export class GameScene extends Phaser.Scene {
       // PC用の操作（カーソル方向、スペースキー、マウスクリック長押し）
       angle = this.input2 ? this.input2.pointerAngle() : 0;
 
-      const spaceKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-      dash = spaceKey ? spaceKey.isDown : false;
+      dash = this.spaceKey ? this.spaceKey.isDown : false;
 
       draw = this.input.activePointer.isDown;
     }
@@ -590,6 +616,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onState(m: StatePayload): void {
+    if (this.worldContainer && !this.worldContainer.visible) {
+      this.worldContainer.setVisible(true);
+    }
+
     if (m.you && m.you.id) {
       this.myId = m.you.id;
       this.gameState.setMyId(m.you.id);
@@ -898,5 +928,18 @@ export class GameScene extends Phaser.Scene {
 
   private onLeaderboard(m: LeaderboardPayload): void {
     this.leaderboardPanel.setLeader(m.topName, m.topScore);
+  }
+
+  private handleShutdown(): void {
+    this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
+    net.offMessage(this.serverMessageHandler);
+    if (this.resizeHandler) {
+      this.scale.off("resize", this.resizeHandler);
+      this.resizeHandler = undefined;
+    }
+    this.spaceKey = undefined;
+    this.input2 = undefined;
+    this.bgm?.destroy();
+    this.bgm = undefined;
   }
 }
