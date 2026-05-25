@@ -260,6 +260,16 @@ func (h *Handler) CleanupExpired() []CPResultMsg {
 	return results
 }
 
+// Balance returns the player's current CP balance from the store.
+// Returns 0 on error or if the player has no balance.
+func (h *Handler) Balance(playerID string) int {
+	total, err := h.store.GetCP(playerID)
+	if err != nil {
+		return 0
+	}
+	return total
+}
+
 // HasSession returns true if the player has an active CP session.
 func (h *Handler) HasSession(playerID string) bool {
 	sess, ok := h.sessions[playerID]
