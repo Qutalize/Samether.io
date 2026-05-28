@@ -447,6 +447,10 @@ func (h *Hub) step(dt float64) {
 				s.CP = 0
 			}
 		}
+		s.CP += game.CPRegenPerSec / float64(game.TickHz)
+		if s.CP > s.MaxCP {
+			s.CP = s.MaxCP
+		}
 	}
 
 	wallDead := h.world.CheckWallDeaths()
