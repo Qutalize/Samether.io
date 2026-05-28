@@ -308,12 +308,33 @@ func (h *Hub) handleInbound(m inboundMsg) {
 		if !isCPOnly {
 			s := game.NewShark(id, p.Name, randomSpawn())
 			s.Route = game.NormalizeRoute(p.Route)
-			// CPStoreに残高があればそれをゲーム内CPとして引き継ぐ（MaxCPでキャップ）
-			if h.cpHandler != nil {
-				if balance := h.cpHandler.Balance(id); balance > 0 {
-					s.CP = min(float64(balance), s.MaxCP)
-				}
+
+			dailyDist := p.DailyDistance
+			if dailyDist < 0 {
+				dailyDist = 0
 			}
+			var bonusMaxCP float64
+			var bonusXP int
+			switch {
+			case dailyDist >= 4000:
+				bonusMaxCP = 100
+				bonusXP = 10 // Stage 1 開始 (XP >= 10)
+			case dailyDist >= 3000:
+				bonusMaxCP = 100
+			case dailyDist >= 2000:
+				bonusMaxCP = 80
+			case dailyDist >= 1000:
+				bonusMaxCP = 50
+			case dailyDist >= 500:
+				bonusMaxCP = 30
+			default:
+				bonusMaxCP = 10
+			}
+			s.MaxCP = bonusMaxCP
+			s.CP = bonusMaxCP / 2
+			s.XP = bonusXP
+			s.UpdateStage()
+
 			h.world.Sharks[id] = s
 		}
 
@@ -425,6 +446,10 @@ func (h *Hub) step(dt float64) {
 			if s.CP < 0 {
 				s.CP = 0
 			}
+		}
+		s.CP += game.CPRegenPerSec / float64(game.TickHz)
+		if s.CP > s.MaxCP {
+			s.CP = s.MaxCP
 		}
 	}
 
