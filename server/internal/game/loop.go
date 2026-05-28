@@ -20,14 +20,14 @@ const (
 	DiverSpeedBoostSec = 5.0
 	DiverSpeed         = 25.0
 
-	BaseSpeed       = 140.0
-	DashMultiplier  = 2.0
-	DashDurationSec = 1.0
+	BaseSpeed      = 140.0
+	DashMultiplier = 2.0
 
 	// CP System
-	InitialCP    = 50.0 // ゲーム開始時のCP
+	InitialCP    = 50.0 // deprecated: daily distance bonus replaces this
 	MaxCPDefault = 100.0
-	DashCPPerSec = 1.0 // ダッシュ消費レート（1秒あたりCP）。調整はここだけでOK
+	DashCPPerSec  = 2.0 // ダッシュ消費レート（1秒あたりCP）。調整はここだけでOK
+	CPRegenPerSec = 0.2 // CP自然回復レート（1秒あたりCP、非ダッシュ時のみ）
 
 	SegmentSpacing    = 5.5
 	CollisionHeadRad  = 8.0
