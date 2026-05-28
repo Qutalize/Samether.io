@@ -1,53 +1,11 @@
 import Phaser from "phaser";
 import { net } from "../../network/websocket";
 import { SharkRoute } from "../../network/protocol";
-import { getTodayDistance, loadCp } from "../../storage/cp";
+import { loadCp } from "../../storage/cp";
 import { getSession, logout } from "../../storage/auth";
 import { styledButton } from "../styledButton";
 
 const SERIF = "'Times New Roman', 'Georgia', serif";
-
-const DAILY_BONUS_TIERS = [
-  { threshold: 4000, maxCp: 100, stage: 1 },
-  { threshold: 3000, maxCp: 100, stage: 0 },
-  { threshold: 2000, maxCp: 80, stage: 0 },
-  { threshold: 1000, maxCp: 50, stage: 0 },
-  { threshold: 500, maxCp: 30, stage: 0 },
-  { threshold: 0, maxCp: 10, stage: 0 },
-] as const;
-
-function formatStartCp(maxCp: number): string {
-  const start = maxCp / 2;
-  return Number.isInteger(start) ? String(start) : start.toFixed(1);
-}
-
-function tierLabel(tier: (typeof DAILY_BONUS_TIERS)[number]): string {
-  const start = formatStartCp(tier.maxCp);
-  if (tier.stage === 1) {
-    return `Stage 1 / MaxCP ${tier.maxCp} (開始 ${start})`;
-  }
-  return `MaxCP ${tier.maxCp} (開始 ${start})`;
-}
-
-function formatDailyDistanceText(meters: number): string {
-  const dist = Math.round(meters);
-  let tierIndex = DAILY_BONUS_TIERS.length - 1;
-  for (let i = 0; i < DAILY_BONUS_TIERS.length; i++) {
-    if (meters >= DAILY_BONUS_TIERS[i].threshold) {
-      tierIndex = i;
-      break;
-    }
-  }
-  const current = DAILY_BONUS_TIERS[tierIndex];
-  const next = tierIndex > 0 ? DAILY_BONUS_TIERS[tierIndex - 1] : null;
-  const lines = [`本日の歩行距離: ${dist} m  (開始ボーナス: ${tierLabel(current)})`];
-  if (next) {
-    lines.push(`次のボーナス (${tierLabel(next)}) まで: ${Math.ceil(next.threshold - meters)} m`);
-  } else {
-    lines.push("最大ボーナス達成!");
-  }
-  return lines.join("\n");
-}
 
 export class HomeScreen extends Phaser.Scene {
   private playerName = "";
@@ -56,7 +14,6 @@ export class HomeScreen extends Phaser.Scene {
   private subtitleText!: Phaser.GameObjects.Text;
   private lineGfx!: Phaser.GameObjects.Graphics;
   private cpText!: Phaser.GameObjects.Text;
-  private dailyDistText!: Phaser.GameObjects.Text;
   private playBtn!: Phaser.GameObjects.Text;
   private cpBtn!: Phaser.GameObjects.Text;
   private guideBtn!: Phaser.GameObjects.Text;
@@ -102,14 +59,6 @@ export class HomeScreen extends Phaser.Scene {
       color: "#6688aa",
     }).setOrigin(0.5);
 
-    this.dailyDistText = this.add.text(0, 0, formatDailyDistanceText(getTodayDistance()), {
-      fontFamily: SERIF,
-      fontSize: "15px",
-      color: "#557799",
-      align: "center",
-      lineSpacing: 4,
-    }).setOrigin(0.5);
-
     this.playBtn = styledButton(this,"─  P L A Y  ─", "28px", "#44ff88", "#88ffbb", 0x22aa55, 8);
     this.playBtn.on("pointerdown", () => this.tryStart());
 
@@ -153,15 +102,12 @@ export class HomeScreen extends Phaser.Scene {
     this.lineGfx.lineTo(lineX + lineW, lineY);
     this.lineGfx.strokePath();
 
-    this.layoutRouteButtons(width / 2, height * 0.46);
-    this.cpText.setPosition(width / 2, height * 0.56).setText(`所持 CP: ${loadCp()}`);
-    this.dailyDistText
-      .setPosition(width / 2, height * 0.62)
-      .setText(formatDailyDistanceText(getTodayDistance()));
-    this.playBtn.setPosition(width / 2, height * 0.69);
-    this.cpBtn.setPosition(width / 2, height * 0.76);
-    this.guideBtn.setPosition(width / 2, height * 0.83);
-    this.logoutBtn.setPosition(width / 2, height * 0.90);
+    this.layoutRouteButtons(width / 2, height * 0.48);
+    this.cpText.setPosition(width / 2, height * 0.58).setText(`所持 CP: ${loadCp()}`);
+    this.playBtn.setPosition(width / 2, height * 0.65);
+    this.cpBtn.setPosition(width / 2, height * 0.73);
+    this.guideBtn.setPosition(width / 2, height * 0.81);
+    this.logoutBtn.setPosition(width / 2, height * 0.89);
   }
 
   private createRouteButtons(): void {
@@ -219,14 +165,7 @@ export class HomeScreen extends Phaser.Scene {
   private async tryStart(): Promise<void> {
     try {
       if (!net.isOpen()) await net.connect();
-      net.send({
-        type: "join",
-        payload: {
-          name: this.playerName,
-          route: this.selectedRoute,
-          dailyDistance: getTodayDistance(),
-        },
-      });
+      net.send({ type: "join", payload: { name: this.playerName, route: this.selectedRoute } });
       this.scene.start("GameScene", { name: this.playerName, route: this.selectedRoute });
     } catch (e) {
       console.error("connect failed", e);
