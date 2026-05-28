@@ -427,7 +427,6 @@ func (h *Hub) step(dt float64) {
 		
 		dash := false
 		if s.IsBot || s.Moving {
-			// ▼ 2. := ではなく = で代入する
 			dash = s.WantDash && s.CP > 0 
 			s.Move(dt, dash)
 			if dash {
@@ -438,6 +437,7 @@ func (h *Hub) step(dt float64) {
 				}
 			}
 		}
+		
 		if !dash {
 			s.CP += game.CPRegenPerSec / float64(game.TickHz)
 			if s.CP > s.MaxCP {
