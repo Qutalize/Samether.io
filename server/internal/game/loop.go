@@ -27,7 +27,7 @@ const (
 	InitialCP    = 50.0 // deprecated: daily distance bonus replaces this
 	MaxCPDefault = 100.0
 	DashCPPerSec  = 2.0 // ダッシュ消費レート（1秒あたりCP）。調整はここだけでOK
-	CPRegenPerSec = 0.2 // CP自然回復レート（1秒あたりCP、非ダッシュ時のみ）
+	CPRegenPerSec = 0.5 // CP自然回復レート（1秒あたりCP、非ダッシュ時のみ）
 
 	SegmentSpacing    = 5.5
 	CollisionHeadRad  = 8.0
