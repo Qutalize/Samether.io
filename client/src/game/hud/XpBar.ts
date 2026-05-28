@@ -48,7 +48,7 @@ export class XpBar implements HudComponent {
     container.add(this.stageText);
 
     this.cpText = scene.add
-      .text(20, 138, "CP 0 / 100", {
+      .text(baseX, 138, "CP 0 / 100", {
         fontFamily: "system-ui, sans-serif",
         fontSize: "13px",
         color: "#99bbcc",
