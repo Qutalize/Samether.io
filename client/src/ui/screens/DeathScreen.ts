@@ -2,13 +2,7 @@ import Phaser from "phaser";
 import type { SharkRoute } from "../../network/protocol";
 import { styledButton } from "../styledButton";
 import type { GameScene } from "../../game/scenes/GameScene";
-
-const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
-  "attack": ["シュモクザメ", "イタチザメ", "アオザメ", "ホオジロザメ", "メガロドン"],
-  "non-attack": ["ドチザメ", "ネムリブカ", "シロワニ", "ウバザメ", "ジンベエザメ"],
-  "deep-sea": ["ツラナガコビトザメ", "ノコギリザメ", "ラブカ", "ミツクリザメ", "ニシオンデンザメ"],
-  "human": ["人間", "人間", "人間", "人間", "人間"], // Humans don't evolve
-};
+import { ROUTE_STAGE_NAMES } from "../../game/config/RouteStageNames";
 
 export class DeathScreen extends Phaser.Scene {
   private score = 0;
@@ -132,6 +126,11 @@ export class DeathScreen extends Phaser.Scene {
 
     this.returnBtn = styledButton(this, "─  ホームへ戻る  ─", "20px", "#665544", "#ccaa88", 0x665544, 6);
     this.returnBtn.setAlpha(0).on("pointerdown", () => {
+      const gameScene = this.scene.get("GameScene");
+      if (gameScene) {
+        // pause中のシーンはstopのSHUTDOWN発火が不確実なため明示的にeventを呼ぶ
+        gameScene.events.emit(Phaser.Scenes.Events.SHUTDOWN);
+      }
       this.scene.stop("GameScene");
       this.scene.start("HomeScreen");
     });
