@@ -10,8 +10,7 @@ export type BaseMessage<T extends string, P> = {
 // Client → Server
 export type JoinMsg = BaseMessage<"join", {
   name: string;
-  route: SharkRoute;
-  dailyDistance?: number;
+  route: SharkRoute; // TODO: Server-side support is pending. Currently ignored by the server.
 }>;
 export type InputMsg = BaseMessage<"input", { angle: number; dash: boolean; draw: boolean; move: boolean }>;
 export type CPStartMsg = BaseMessage<"cp_start", Record<string, never>>;
@@ -59,7 +58,6 @@ export interface StateYou {
   xp: number;
   stage: number;
   cp?: number;
-  maxCp?: number;
 }
 
 export interface StatePayload {

@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 import type { HudComponent } from "./HudComponent";
 import type { SharkRoute } from "../../network/protocol";
-import { isTouchDevice } from "../config/deviceUtils";
 
 const RADAR_R = 90;
 const RADAR_RANGE = 1400;
@@ -29,8 +28,13 @@ export class RadarRenderer implements HudComponent {
   private sharks: RadarBlip[] = [];
   private foods: { x: number; y: number; isRed?: boolean }[] = [];
 
+  private static isTouchDevice(scene: Phaser.Scene): boolean {
+    const nav = globalThis.navigator;
+    return !scene.sys.game.device.os.desktop || (nav?.maxTouchPoints ?? 0) > 0;
+  }
+
   constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
-    this.isMobile = isTouchDevice(scene);
+    this.isMobile = RadarRenderer.isTouchDevice(scene);
     this.gfx = scene.add.graphics();
     container.add(this.gfx);
     this.updateOrigin(scene.scale.width, scene.scale.height);

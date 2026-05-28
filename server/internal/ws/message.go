@@ -25,9 +25,8 @@ type Point struct {
 // ============================================================
 
 type JoinPayload struct {
-	Name          string  `json:"name"`
-	Route         string  `json:"route,omitempty"`
-	DailyDistance float64 `json:"dailyDistance,omitempty"`
+	Name  string `json:"name"`
+	Route string `json:"route,omitempty"`
 }
 
 type InputPayload struct {

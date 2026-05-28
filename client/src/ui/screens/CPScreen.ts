@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { CPNetClient } from "../../network/cp-websocket";
-import { addDailyDistance, loadCp, setCp } from "../../storage/cp";
+import { loadCp, setCp } from "../../storage/cp";
 import type { ServerMsg } from "../../network/protocol";
 import { styledButton } from "../styledButton";
 
@@ -124,6 +124,11 @@ export class CPScreen extends Phaser.Scene {
     this.closeHandler = () => this.handleDisconnect();
     this.cpNet.onMessage(this.msgHandler);
     this.cpNet.onClose(this.closeHandler);
+
+    /* 画面表示時にサーバーから最新CP残高を取得 */
+    if (this.cpNet.isOpen()) {
+      this.cpNet.send({ type: "cp_balance", payload: {} });
+    }
   }
 
   private layout(width: number, height: number): void {
@@ -191,7 +196,6 @@ export class CPScreen extends Phaser.Scene {
         );
         this.distText.setText("");
         setCp(r.total);
-        addDailyDistance(r.distance);
         this.cpDisplayText.setText(`所持 CP: ${r.total}`);
         // 軌跡をまとめて描画
         if (r.positions && r.positions.length > 0) {
@@ -310,7 +314,7 @@ export class CPScreen extends Phaser.Scene {
     const container = document.createElement("div");
     container.id = "cp-map";
     container.style.cssText =
-      "position:fixed;top:18%;left:50%;transform:translateX(-50%);width:45%;height:40%;z-index:10;border-radius:8px;border:1px solid #225588;";
+      "position:fixed;top:18%;left:32%;width:44%;height:40%;z-index:10;border-radius:8px;border:1px solid #225588;";
     document.body.appendChild(container);
 
     // まず現在地を1回取得してから地図を初期化する
