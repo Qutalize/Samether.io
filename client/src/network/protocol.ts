@@ -58,6 +58,7 @@ export interface StateYou {
   xp: number;
   stage: number;
   cp?: number;
+  maxCp?: number;
 }
 
 export interface StatePayload {

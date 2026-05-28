@@ -3,7 +3,6 @@ import type { HudComponent } from "./HudComponent";
 import type { SharkRoute } from "../../network/protocol";
 
 const STAGE_THRESHOLDS = [0, 10, 25, 50, 100];
-const CP_MAX = 100;
 
 const ROUTE_STAGE_NAMES: Record<SharkRoute, string[]> = {
   "attack": ["シュモクザメ", "イタチザメ", "アオザメ", "ホオジロザメ", "メガロドン"],
@@ -56,22 +55,22 @@ export class XpBar implements HudComponent {
     container.add(this.cpText);
   }
 
-  update(xp: number, stage: number, route: SharkRoute, cp: number): void {
+  update(xp: number, stage: number, route: SharkRoute, cp: number, maxCp: number): void {
     const isMax = stage >= STAGE_THRESHOLDS.length - 1;
     const threshold = isMax
       ? STAGE_THRESHOLDS[STAGE_THRESHOLDS.length - 1]
       : STAGE_THRESHOLDS[stage + 1];
 
-    this.drawBar(xp, threshold, cp);
+    this.drawBar(xp, threshold, cp, maxCp);
     this.scoreText.setText(isMax ? `${xp} XP` : `${xp} / ${threshold} XP`);
     const stageName = ROUTE_STAGE_NAMES[route][
       Math.min(stage, ROUTE_STAGE_NAMES[route].length - 1)
     ];
     this.stageText.setText(`${stageName} (Lv.${stage + 1})`);
-    this.cpText.setText(`CP ${Math.max(0, Math.round(cp))} / ${CP_MAX}`);
+    this.cpText.setText(`CP ${Math.max(0, Math.round(cp))} / ${maxCp}`);
   }
 
-  private drawBar(xp: number, threshold: number, cp: number): void {
+  private drawBar(xp: number, threshold: number, cp: number, maxCp: number): void {
     const g = this.gfx;
     g.clear();
     const W = 320;
@@ -115,7 +114,7 @@ export class XpBar implements HudComponent {
     g.lineStyle(1.2, 0x20485a, 0.65);
     g.strokeRoundedRect(X, CP_Y, W, 16, 6);
 
-    const cpRatio = Math.max(0, Math.min(cp / CP_MAX, 1));
+    const cpRatio = Math.max(0, Math.min(cp / maxCp, 1));
     if (cpRatio > 0) {
       const cpW = (W - 4) * cpRatio;
       g.fillStyle(0x44ddff, 0.9);
