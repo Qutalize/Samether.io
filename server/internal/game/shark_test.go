@@ -12,7 +12,7 @@ func TestSharkMoveStraight(t *testing.T) {
 	dt := 1.0 / float64(TickHz) // one tick
 	s.Move(dt, false)
 
-	expected := 100 + RouteNormalSpeed(s.Route)*dt
+	expected := 100 + BaseSpeed*dt
 	if math.Abs(s.Head.X-expected) > 0.001 {
 		t.Fatalf("head X = %v, want %v", s.Head.X, expected)
 	}
@@ -50,7 +50,7 @@ func TestSharkDash(t *testing.T) {
 	dt := 1.0 / float64(TickHz)
 	s.Move(dt, true)
 
-	expected := RouteDashSpeed(s.Route) * dt
+	expected := BaseSpeed * DashMultiplier * dt
 	if math.Abs(s.Head.X-expected) > 0.001 {
 		t.Fatalf("dashed head X = %v, want %v", s.Head.X, expected)
 	}

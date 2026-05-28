@@ -108,9 +108,13 @@ func (s *Shark) Move(dt float64, dash bool) {
 	}
 
 	// 2. Move forward
-	speed := RouteNormalSpeed(s.Route)
+	speed := BaseSpeed
+	// Human mode is slower
+	if s.Route == RouteHuman {
+		speed *= 0.4 // 40% of normal speed
+	}
 	if dash {
-		speed = RouteDashSpeed(s.Route)
+		speed *= DashMultiplier
 	}
 	if s.SpeedBoostUntilTick > 0 {
 		speed *= 1.5
@@ -171,38 +175,6 @@ func (s *Shark) UpdateStage() {
 			Y: tail.Y - math.Sin(s.Angle)*spacing,
 		}
 		s.Segments = append(s.Segments, tail)
-	}
-}
-
-// RouteNormalSpeed returns the normal (non-dash) speed for a given route.
-func RouteNormalSpeed(route string) float64 {
-	switch route {
-	case RouteAttack:
-		return 160
-	case RouteNonAttack:
-		return 140
-	case RouteDeepSea:
-		return 120
-	case RouteHuman:
-		return 56
-	default:
-		return BaseSpeed
-	}
-}
-
-// RouteDashSpeed returns the dash speed for a given route.
-func RouteDashSpeed(route string) float64 {
-	switch route {
-	case RouteAttack:
-		return 300
-	case RouteNonAttack:
-		return 220
-	case RouteDeepSea:
-		return 260
-	case RouteHuman:
-		return 112
-	default:
-		return BaseSpeed * DashMultiplier
 	}
 }
 
