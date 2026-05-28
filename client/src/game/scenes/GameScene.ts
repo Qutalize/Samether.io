@@ -20,6 +20,7 @@ import { GameState } from "../state/GameState";
 import { TerritoryManager } from "../territory/TerritoryManager";
 import { SuctionEffect } from "../effects/SuctionEffect";
 import { getRouteColor } from "../config/RouteColors";
+import { isTouchDevice } from "../config/deviceUtils";
 
 /* ── constants ─────────────────────────────────────────────── */
 const STAGE_ZOOMS = [1.0, 0.92, 0.84, 0.76, 0.68];
@@ -103,7 +104,6 @@ export class GameScene extends Phaser.Scene {
   /* audio */
   private bgm?: Phaser.Sound.BaseSound;
   private prevXp = 0;
-  private spaceKey?: Phaser.Input.Keyboard.Key;
   private serverMessageHandler = (m: ServerMsg) => this.handleServer(m);
   private resizeHandler?: (size: Phaser.Structs.Size) => void;
   private addedPointers = false;
@@ -125,14 +125,8 @@ export class GameScene extends Phaser.Scene {
     this.isWhaleShark = false;
     this.prevXp = 0;
     this.pointerTrail = [];
-    this.spaceKey = undefined;
     this.myName = data.name;
     this.myRoute = data.route;
-  }
-
-  private isTouchDevice(): boolean {
-    const nav = globalThis.navigator;
-    return !this.sys.game.device.os.desktop || (nav?.maxTouchPoints ?? 0) > 0;
   }
 
   preload(): void {
@@ -157,7 +151,7 @@ export class GameScene extends Phaser.Scene {
   /*  CREATE                                                  */
   /* ════════════════════════════════════════════════════════ */
   create(): void {
-    this.isMobile = !this.sys.game.device.os.desktop && this.isTouchDevice();
+    this.isMobile = !this.sys.game.device.os.desktop && isTouchDevice(this);
 
     // ★マルチタッチを明示的に有効化（デフォルト2本 + 追加2本 = 最大4本）
     if (!this.addedPointers) {
@@ -260,9 +254,6 @@ export class GameScene extends Phaser.Scene {
 
     /* network */
     net.onMessage(this.serverMessageHandler);
-    if (!this.spaceKey) {
-      this.spaceKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    }
     this.time.addEvent({
       delay: 50,
       loop: true,
@@ -563,7 +554,7 @@ export class GameScene extends Phaser.Scene {
       // PC用の操作（カーソル方向、スペースキー、マウスクリック長押し）
       angle = this.input2 ? this.input2.pointerAngle() : 0;
 
-      dash = this.spaceKey ? this.spaceKey.isDown : false;
+      dash = this.input2 ? this.input2.isDashDown() : false;
 
       draw = this.input.activePointer.isDown;
     }
@@ -937,7 +928,6 @@ export class GameScene extends Phaser.Scene {
       this.scale.off("resize", this.resizeHandler);
       this.resizeHandler = undefined;
     }
-    this.spaceKey = undefined;
     this.input2 = undefined;
     this.bgm?.destroy();
     this.bgm = undefined;

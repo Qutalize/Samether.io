@@ -124,11 +124,6 @@ export class CPScreen extends Phaser.Scene {
     this.closeHandler = () => this.handleDisconnect();
     this.cpNet.onMessage(this.msgHandler);
     this.cpNet.onClose(this.closeHandler);
-
-    /* 画面表示時にサーバーから最新CP残高を取得 */
-    if (this.cpNet.isOpen()) {
-      this.cpNet.send({ type: "cp_balance", payload: {} });
-    }
   }
 
   private layout(width: number, height: number): void {
