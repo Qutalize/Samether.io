@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { CPNetClient } from "../../network/cp-websocket";
-import { loadCp, setCp } from "../../storage/cp";
+import { addDailyDistance, loadCp, setCp } from "../../storage/cp";
 import type { ServerMsg } from "../../network/protocol";
 import { styledButton } from "../styledButton";
 
@@ -196,6 +196,7 @@ export class CPScreen extends Phaser.Scene {
         );
         this.distText.setText("");
         setCp(r.total);
+        addDailyDistance(r.distance);
         this.cpDisplayText.setText(`所持 CP: ${r.total}`);
         // 軌跡をまとめて描画
         if (r.positions && r.positions.length > 0) {

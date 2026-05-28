@@ -25,7 +25,7 @@ const (
 	DashDurationSec = 1.0
 
 	// CP System
-	InitialCP    = 50.0 // ゲーム開始時のCP
+	InitialCP    = 50.0 // deprecated: daily distance bonus replaces this
 	MaxCPDefault = 100.0
 	DashCPPerSec = 1.0 // ダッシュ消費レート（1秒あたりCP）。調整はここだけでOK
 

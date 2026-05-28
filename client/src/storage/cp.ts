@@ -20,3 +20,26 @@ export function setCp(total: number): void {
 export function resetCp(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
+
+const DAILY_DIST_PREFIX = "samether_daily_dist_";
+
+export function getTodayKey(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${DAILY_DIST_PREFIX}${yyyy}-${mm}-${dd}`;
+}
+
+export function addDailyDistance(meters: number): void {
+  const key = getTodayKey();
+  const current = parseFloat(localStorage.getItem(key) ?? "0") || 0;
+  localStorage.setItem(key, String(current + Math.max(0, meters)));
+}
+
+export function getTodayDistance(): number {
+  const raw = localStorage.getItem(getTodayKey());
+  if (raw == null) return 0;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}

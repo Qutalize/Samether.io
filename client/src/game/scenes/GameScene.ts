@@ -691,7 +691,7 @@ export class GameScene extends Phaser.Scene {
         }
         this.prevXp = m.you.xp;
       }
-      this.xpBar.update(m.you.xp, m.you.stage, this.myRoute, m.you.cp ?? 0);
+      this.xpBar.update(m.you.xp, m.you.stage, this.myRoute, m.you.cp ?? 0, m.you.maxCp ?? 100);
 
       /* Update territory manager and GameState when level changes */
       if (m.you.stage !== previousStage) {
