@@ -36,6 +36,7 @@ type Shark struct {
 	Stage              int // zero-based index into Stages
 	CP                 float64 // 現在のチャージポイント（ダッシュ消費用）
 	MaxCP              float64 // 最大チャージポイント
+	Moving             bool    // プレイヤーが移動入力をしているか
 	WantDash           bool    // プレイヤーがダッシュボタンを押しているか
 	DashUntilTick      int64   // 将来のボット向け拡張用（現在未使用）
 	SpeedBoostUntilTick int64

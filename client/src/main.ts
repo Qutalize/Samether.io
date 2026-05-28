@@ -30,5 +30,14 @@ if (isMobile) {
   const so = screen.orientation as ScreenOrientation & {
     lock?: (m: string) => Promise<void>;
   };
-  so.lock?.("portrait").catch(() => {});
+  // Try to lock to landscape-primary, and re-attempt on orientation changes or focus.
+  const tryLock = () => {
+    so.lock?.("landscape-primary").catch(() => {
+      // fallback to landscape if primary not allowed
+      so.lock?.("landscape").catch(() => {});
+    });
+  };
+  tryLock();
+  window.addEventListener('orientationchange', tryLock);
+  window.addEventListener('focus', tryLock);
 }

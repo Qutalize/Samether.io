@@ -342,7 +342,14 @@ func (h *Hub) handleInbound(m inboundMsg) {
 			return
 		}
 
-		s.TargetAngle = p.Angle
+		// If move is true, update Moving and TargetAngle. If move is false (joystick released)
+		// we intentionally DO NOT set Moving = false so the shark keeps moving in the last
+		// known direction. This preserves the behavior where releasing the joystick keeps
+		// the shark moving forward in the previous heading.
+		if p.Move {
+			s.Moving = true
+			s.TargetAngle = p.Angle
+		}
 		s.WantDash = p.Dash
 
 		if s.TrailActive && !p.Draw {
@@ -417,13 +424,15 @@ func (h *Hub) step(dt float64) {
 		if !s.Alive {
 			continue
 		}
-		dash := s.WantDash && s.CP > 0
-		s.Move(dt, dash)
-		if dash {
-			consume := game.DashCPPerSec / float64(game.TickHz) * game.DashCPScale(s.Route)
-			s.CP -= consume
-			if s.CP < 0 {
-				s.CP = 0
+		if s.IsBot || s.Moving {
+			dash := s.WantDash && s.CP > 0
+			s.Move(dt, dash)
+			if dash {
+				consume := game.DashCPPerSec / float64(game.TickHz) * game.DashCPScale(s.Route)
+				s.CP -= consume
+				if s.CP < 0 {
+					s.CP = 0
+				}
 			}
 		}
 	}

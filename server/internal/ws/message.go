@@ -33,6 +33,7 @@ type InputPayload struct {
 	Angle float64 `json:"angle"`
 	Dash  bool    `json:"dash"`
 	Draw  bool    `json:"draw"`
+	Move  bool    `json:"move"`
 }
 
 // ============================================================

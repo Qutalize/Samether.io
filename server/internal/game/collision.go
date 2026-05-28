@@ -37,13 +37,20 @@ func (w *World) CheckSharkCollisions() []string {
 			if self.Route == RouteHuman {
 				startIndex = 0 // Check all segments including head
 			}
-			for i := startIndex; i < len(other.Segments); i++ {
-				if headPos.Dist(other.Segments[i]) <= CollisionBodyRad*other.SizeScale() {
-					self.Alive = false
-					dead = append(dead, id)
-					goto nextSelf
+				for i := startIndex; i < len(other.Segments); i++ {
+					if headPos.Dist(other.Segments[i]) <= CollisionBodyRad*other.SizeScale() {
+						// If the colliding entity is a human, they die. Additionally,
+						// award the shark that collided with the human as if it ate a diver:
+						// give XP and temporary speed boost.
+						if self.Route == RouteHuman {
+							other.XP += DiverXP
+							other.SpeedBoostUntilTick = w.Tick + int64(DiverSpeedBoostSec*TickHz)
+						}
+						self.Alive = false
+						dead = append(dead, id)
+						goto nextSelf
+					}
 				}
-			}
 		}
 	nextSelf:
 	}

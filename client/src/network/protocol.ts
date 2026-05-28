@@ -12,7 +12,7 @@ export type JoinMsg = BaseMessage<"join", {
   name: string;
   route: SharkRoute; // TODO: Server-side support is pending. Currently ignored by the server.
 }>;
-export type InputMsg = BaseMessage<"input", { angle: number; dash: boolean; draw: boolean }>;
+export type InputMsg = BaseMessage<"input", { angle: number; dash: boolean; draw: boolean; move: boolean }>;
 export type CPStartMsg = BaseMessage<"cp_start", Record<string, never>>;
 export type CPUpdateMsg = BaseMessage<"cp_update", { lat: number; lon: number; acc: number }>;
 export type CPStopMsg = BaseMessage<"cp_stop", Record<string, never>>;

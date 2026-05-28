@@ -553,10 +553,12 @@ export class GameScene extends Phaser.Scene {
     let angle = 0;
     let dash = false;
     let draw = false;
+    let move = true;
 
     if (this.isMobile) {
       // モバイル用の操作（ジョイスティックと専用ボタン）
-      angle = this.joystickPointerId !== -1 ? this.joystickAngle : 0;
+      move = this.joystickPointerId !== -1;
+      angle = move ? this.joystickAngle : 0;
       dash = this.isDashBtnDown;
       draw = this.isTerritoryBtnDown;
     } else {
@@ -566,9 +568,10 @@ export class GameScene extends Phaser.Scene {
       dash = this.spaceKey ? this.spaceKey.isDown : false;
 
       draw = this.input.activePointer.isDown;
+      move = true;
     }
 
-    net.send({ type: "input", payload: { angle, dash, draw } });
+    net.send({ type: "input", payload: { angle, dash, draw, move } });
   }
 
   private getPointerId(pointer: Phaser.Input.Pointer): number {
@@ -804,10 +807,16 @@ export class GameScene extends Phaser.Scene {
     container.setScrollFactor(0);
     container.setDepth(1001);
 
-    const outer = this.add.circle(0, 0, radius + 6, style.fill, 0.12).setOrigin(0.5);
-    const circle = this.add.circle(0, 0, radius, style.fill, style.fillAlpha).setOrigin(0.5);
+    const outerRadius = radius + 6;
+    // ★ コンテナ内での正しい中心座標（幅と高さの半分）
+    const cx = outerRadius;
+    const cy = outerRadius;
+
+    // 各描画オブジェクトの中心を cx, cy に配置
+    const outer = this.add.circle(cx, cy, outerRadius, style.fill, 0.12).setOrigin(0.5);
+    const circle = this.add.circle(cx, cy, radius, style.fill, style.fillAlpha).setOrigin(0.5);
     circle.setStrokeStyle(3, style.stroke, style.strokeAlpha);
-    const text = this.add.text(0, 0, label, {
+    const text = this.add.text(cx, cy, label, {
       fontFamily: "system-ui, sans-serif",
       fontSize: "14px",
       fontStyle: "bold",
@@ -816,10 +825,18 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     container.add([outer, circle, text]);
-    container.setSize(radius * 2, radius * 2);
+    // Container size matches outer circle bounds
+    container.setSize(outerRadius * 2, outerRadius * 2);
+
+    // Increase touch sensitivity by enlarging hit radius slightly beyond visible outer radius
+    const hitRadius = Math.round(outerRadius * 1.2);
+    // ヒットエリアの中心もコンテナ中央 (cx, cy) に合わせる
+    
+    const offsetx = 45;
+    const offsety = 0;
 
     container.setInteractive({
-      hitArea: new Phaser.Geom.Circle(radius, radius, radius),
+      hitArea: new Phaser.Geom.Circle(cx + offsetx, cy + offsety, outerRadius),
       hitAreaCallback: Phaser.Geom.Circle.Contains,
       useHandCursor: true,
     });
@@ -829,13 +846,33 @@ export class GameScene extends Phaser.Scene {
 
   private layoutMobileUI(width: number, height: number): void {
     const buttonScale = Phaser.Math.Clamp(Math.min(width, height) / 900, 0.8, 1.0);
-    const leftMargin = Math.max(48, Math.round(width * 0.08));
-    const dashX = leftMargin;
-    const territoryX = leftMargin;
-    const territoryY = Math.round(height * 0.74);
-    const dashY = Math.round(height * 0.88);
+    // Increase left inset slightly so buttons don't appear to stick out on small screens
+    const leftMargin = Math.max(64, Math.round(width * 0.06));
+    // default positions: both on left, territory above dash
+    let dashX = leftMargin;
+    let territoryX = leftMargin;
+    const territoryY = Math.round(height * 0.72);
+    const dashY = Math.round(height * 0.88)-100;
     const joystickX = width - Math.round(118 * buttonScale);
     const joystickY = height - Math.round(118 * buttonScale);
+
+    // Determine actual button rendered diameter (container width)
+    const dashBtnW = this.dashMobileBtn?.width ?? Math.round((56 * 0.8 * buttonScale + 6) * 2);
+    const territoryBtnW = this.territoryMobileBtn?.width ?? dashBtnW;
+    const btnDiameter = Math.max(dashBtnW, territoryBtnW);
+
+    // Ensure vertical gap between buttons; if insufficient, place territory to the right of dash
+    const desiredGap = btnDiameter + 12;
+    if (dashY - territoryY < desiredGap) {
+      // place territory to right of dash
+      const tentativeX = leftMargin + btnDiameter + 12;
+      const rightLimit = Math.max(leftMargin + btnDiameter + 12, joystickX - 20);
+      territoryX = tentativeX;
+      if (territoryX + btnDiameter > rightLimit) {
+        // fallback: clamp so it doesn't overlap joystick
+        territoryX = Math.max(leftMargin, rightLimit - btnDiameter);
+      }
+    }
 
     this.territoryMobileBtn?.setPosition(territoryX, territoryY);
     this.dashMobileBtn?.setPosition(dashX, dashY);
