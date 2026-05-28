@@ -26,11 +26,11 @@ export class XpBar implements HudComponent {
     this.gfx = scene.add.graphics();
     container.add(this.gfx);
 
-    const offsetX = 10; 
+    const offsetX = 15; 
     const baseX = 28 + offsetX;
 
     this.scoreText = scene.add
-      .text(baseX, 42, "", { // 28 から baseX に変更
+      .text(baseX, 42, "", {
         fontFamily: "system-ui, sans-serif",
         fontSize: "15px",
         fontStyle: "bold",
@@ -48,7 +48,7 @@ export class XpBar implements HudComponent {
     container.add(this.stageText);
 
     this.cpText = scene.add
-      .text(baseX, 138, "CP 0 / 100", { // 28 から baseX に変更
+      .text(baseX, 138, "CP 0 / 100", {
         fontFamily: "system-ui, sans-serif",
         fontSize: "13px",
         color: "#99bbcc",
@@ -76,7 +76,7 @@ export class XpBar implements HudComponent {
     g.clear();
     const W = 320;
     const H = 26;
-    const offsetX = 10;
+    const offsetX = 15;
     const X = 28 + offsetX; 
     
     const Y = 68;

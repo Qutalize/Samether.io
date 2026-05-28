@@ -27,7 +27,8 @@ const (
 	// CP System
 	InitialCP    = 50.0 // ゲーム開始時のCP
 	MaxCPDefault = 100.0
-	DashCPPerSec = 1.0 // ダッシュ消費レート（1秒あたりCP）。調整はここだけでOK
+	DashCPPerSec  = 1.0  // ダッシュ消費レート（1秒あたりCP）。調整はここだけでOK
+	CPRegenPerSec = 10.0 // CP自然回復レート（1秒あたりCP）。調整はここだけでOK
 
 	SegmentSpacing    = 5.5
 	CollisionHeadRad  = 8.0
