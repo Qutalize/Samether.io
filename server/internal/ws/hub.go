@@ -445,8 +445,11 @@ func (h *Hub) step(dt float64) {
 		if !s.Alive {
 			continue
 		}
+		
+		dash := false
 		if s.IsBot || s.Moving {
-			dash := s.WantDash && s.CP > 0
+			// ▼ 2. := ではなく = で代入する
+			dash = s.WantDash && s.CP > 0 
 			s.Move(dt, dash)
 			if dash {
 				consume := game.DashCPPerSec / float64(game.TickHz) * game.DashCPScale(s.Route)
@@ -456,6 +459,7 @@ func (h *Hub) step(dt float64) {
 				}
 			}
 		}
+		
 		if !dash {
 			s.CP += game.CPRegenPerSec / float64(game.TickHz)
 			if s.CP > s.MaxCP {
