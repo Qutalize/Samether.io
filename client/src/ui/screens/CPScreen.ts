@@ -41,6 +41,7 @@ export class CPScreen extends Phaser.Scene {
 
   /** サーバーから受け取った最新値 */
   private estimatedDist = 0;
+  private pointsRecorded = 0;
 
   constructor() {
     super({ key: "CPScreen" });
@@ -150,8 +151,9 @@ export class CPScreen extends Phaser.Scene {
       case "cp_progress": {
         const p = msg.payload;
         this.estimatedDist = p.estimatedDist;
+        this.pointsRecorded = p.pointsRecorded;
         this.distText.setText(
-          `距離: ${Math.round(this.estimatedDist)} m`,
+          `距離: ${Math.round(this.estimatedDist)} m  (${this.pointsRecorded} 点記録)`,
         );
         break;
       }
@@ -204,6 +206,7 @@ export class CPScreen extends Phaser.Scene {
     this.applyPhase();
     this.setStatus("接続中...", "#ffdd44");
     this.estimatedDist = 0;
+    this.pointsRecorded = 0;
     this.trackCoords = [];
     this.distText.setText("");
 
