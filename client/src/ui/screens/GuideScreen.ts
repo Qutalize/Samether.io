@@ -107,12 +107,13 @@ export class GuideScreen extends Phaser.Scene {
     const pageWidth = width;
     const contentY = 70;
     const contentHeight = height - contentY - 60;
+    const scale = Math.min(1.0, contentHeight / 280);
 
     const pageBuilders = [
-      () => this.buildRulesPage(pageWidth, contentY, contentHeight),
-      () => this.buildRoutePage(ROUTES[0], pageWidth, contentY, contentHeight),
-      () => this.buildRoutePage(ROUTES[1], pageWidth, contentY, contentHeight),
-      () => this.buildRoutePage(ROUTES[2], pageWidth, contentY, contentHeight),
+      () => this.buildRulesPage(pageWidth, contentY, contentHeight, scale),
+      () => this.buildRoutePage(ROUTES[0], pageWidth, contentY, contentHeight, scale),
+      () => this.buildRoutePage(ROUTES[1], pageWidth, contentY, contentHeight, scale),
+      () => this.buildRoutePage(ROUTES[2], pageWidth, contentY, contentHeight, scale),
     ];
 
     pageBuilders.forEach((build, i) => {
@@ -125,7 +126,8 @@ export class GuideScreen extends Phaser.Scene {
   private buildRulesPage(
     width: number,
     startY: number,
-    _height: number
+    _height: number,
+    scale: number
   ): Phaser.GameObjects.GameObject[] {
     const objs: Phaser.GameObjects.GameObject[] = [];
     let y = startY + 30;
@@ -133,19 +135,19 @@ export class GuideScreen extends Phaser.Scene {
     const heading = this.add
       .text(width / 2, y, "─  ル ー ル  ─", {
         fontFamily: SERIF,
-        fontSize: "22px",
+        fontSize: `${Math.round(22 * scale)}px`,
         color: "#aa8866",
         letterSpacing: 6,
       })
       .setOrigin(0.5);
     objs.push(heading);
-    y += 50;
+    y += Math.round(50 * scale);
 
     for (const rule of RULES) {
       const t = this.add
         .text(width / 2, y, `◆  ${rule}`, {
           fontFamily: SERIF,
-          fontSize: "17px",
+          fontSize: `${Math.round(17 * scale)}px`,
           color: "#bbccdd",
           letterSpacing: 2,
           wordWrap: { width: width - 80 },
@@ -153,7 +155,7 @@ export class GuideScreen extends Phaser.Scene {
         })
         .setOrigin(0.5, 0);
       objs.push(t);
-      y += t.height + 18;
+      y += t.height + Math.round(18 * scale);
     }
 
     return objs;
@@ -163,26 +165,17 @@ export class GuideScreen extends Phaser.Scene {
     route: (typeof ROUTES)[0],
     width: number,
     startY: number,
-    _height: number
+    _height: number,
+    scale: number
   ): Phaser.GameObjects.GameObject[] {
     const objs: Phaser.GameObjects.GameObject[] = [];
-    let y = startY + 30;
+    let y = startY + Math.round(20 * scale);
 
-    const sectionLabel = this.add
-      .text(width / 2, y, "─  進 化 系 統  ─", {
-        fontFamily: SERIF,
-        fontSize: "20px",
-        color: "#aa8866",
-        letterSpacing: 6,
-      })
-      .setOrigin(0.5);
-    objs.push(sectionLabel);
-    y += 46;
-
+    /* route name — full width centered */
     const header = this.add
       .text(width / 2, y, route.name, {
         fontFamily: SERIF,
-        fontSize: "28px",
+        fontSize: `${Math.round(28 * scale)}px`,
         color: route.color,
         letterSpacing: 6,
       })
@@ -191,46 +184,59 @@ export class GuideScreen extends Phaser.Scene {
       header.postFX.addGlow(route.glowColor, 5, 0, false, 0.1, 10);
     }
     objs.push(header);
-    y += 46;
+    y += Math.round(40 * scale);
 
-    /* evolution chain — one shark per line with arrows */
+    /* 2-column layout: left = evolution chain, right = description */
+    const leftCenterX = width * 0.22;
+    const rightStartX = width * 0.46;
+    const rightWrapWidth = width - rightStartX - 20;
+
+    /* column divider */
+    const dividerX = width * 0.42;
+    objs.push(
+      this.add
+        .graphics()
+        .lineStyle(1, 0x225588, 0.3)
+        .lineBetween(dividerX, y, dividerX, y + Math.round(180 * scale))
+    );
+
+    /* left: evolution chain */
+    let chainY = y;
     for (let i = 0; i < route.sharks.length; i++) {
       const shark = this.add
-        .text(width / 2, y, route.sharks[i], {
+        .text(leftCenterX, chainY, route.sharks[i], {
           fontFamily: SERIF,
-          fontSize: "19px",
+          fontSize: `${Math.round(17 * scale)}px`,
           color: "#ddeeff",
           letterSpacing: 2,
         })
         .setOrigin(0.5);
       objs.push(shark);
-      y += 28;
+      chainY += Math.round(24 * scale);
 
       if (i < route.sharks.length - 1) {
         const arrow = this.add
-          .text(width / 2, y, "↓", {
+          .text(leftCenterX, chainY, "↓", {
             fontFamily: SERIF,
-            fontSize: "16px",
+            fontSize: `${Math.round(14 * scale)}px`,
             color: "#556677",
           })
           .setOrigin(0.5);
         objs.push(arrow);
-        y += 24;
+        chainY += Math.round(18 * scale);
       }
     }
 
-    y += 20;
-
+    /* right: description */
     const desc = this.add
-      .text(width / 2, y, route.desc, {
+      .text(rightStartX, y, route.desc, {
         fontFamily: SERIF,
-        fontSize: "16px",
+        fontSize: `${Math.round(15 * scale)}px`,
         color: "#bbccdd",
-        align: "center",
-        lineSpacing: 8,
-        wordWrap: { width: width - 80 },
+        lineSpacing: Math.round(8 * scale),
+        wordWrap: { width: rightWrapWidth },
       })
-      .setOrigin(0.5, 0);
+      .setOrigin(0, 0);
     objs.push(desc);
 
     return objs;
