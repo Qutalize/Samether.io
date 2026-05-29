@@ -5,7 +5,7 @@ import (
 	"io/fs"
 )
 
-//go:embed assets
+go:embed assets
 var embedded embed.FS
 
 // FS returns the embedded client assets rooted at "assets/".
