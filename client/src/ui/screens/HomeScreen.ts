@@ -89,6 +89,8 @@ export class HomeScreen extends Phaser.Scene {
   }
 
   private layout(width: number, height: number): void {
+    const isMobile = height < 500;
+    this.titleText.setFontSize(isMobile ? "32px" : "52px");
     this.titleText.setPosition(width / 2, height * 0.22);
     this.subtitleText.setPosition(width / 2, height * 0.30);
 
