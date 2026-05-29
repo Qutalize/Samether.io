@@ -34,7 +34,7 @@ const RULES = [
   "ダッシュで CP を消費して一時的に加速",
 ];
 
-const TOTAL_PAGES = 4;
+const TOTAL_PAGES = 5;
 const SWIPE_THRESHOLD = 50;
 const TWEEN_DURATION = 300;
 
@@ -58,29 +58,16 @@ export class GuideScreen extends Phaser.Scene {
     this.pages = [];
     this.isTweening = false;
 
-    this.buildFixedHeader(width);
+    this.buildFixedHeader(width, height);
     this.buildPages(width, height);
     this.buildFixedFooter(width, height);
     this.setupSwipeInput();
     this.refreshNavState();
   }
 
-  private buildFixedHeader(width: number): void {
-    /* back button — always visible top-left */
-    const back = this.add
-      .text(16, 16, "← ホームへ", {
-        fontFamily: SERIF,
-        fontSize: "18px",
-        color: "#6688aa",
-      })
-      .setInteractive({ useHandCursor: true })
-      .setDepth(10);
+  private buildFixedHeader(width: number, height: number): void {
+    if (height < 500) return;
 
-    back.on("pointerover", () => back.setColor("#88bbdd"));
-    back.on("pointerout", () => back.setColor("#6688aa"));
-    back.on("pointerdown", () => this.scene.start("HomeScreen"));
-
-    /* title */
     const title = this.add
       .text(width / 2, 30, "G U I D E", {
         fontFamily: SERIF,
@@ -95,7 +82,6 @@ export class GuideScreen extends Phaser.Scene {
       title.postFX.addGlow(0x225588, 4, 0, false, 0.1, 10);
     }
 
-    /* separator line */
     this.add
       .graphics()
       .lineStyle(1, 0x225588, 0.4)
@@ -105,14 +91,16 @@ export class GuideScreen extends Phaser.Scene {
 
   private buildPages(width: number, height: number): void {
     const pageWidth = width;
-    const contentY = 70;
+    const contentY = height < 500 ? 10 : 70;
     const contentHeight = height - contentY - 60;
+    const scale = Math.min(1.0, contentHeight / 280);
 
     const pageBuilders = [
-      () => this.buildRulesPage(pageWidth, contentY, contentHeight),
-      () => this.buildRoutePage(ROUTES[0], pageWidth, contentY, contentHeight),
-      () => this.buildRoutePage(ROUTES[1], pageWidth, contentY, contentHeight),
-      () => this.buildRoutePage(ROUTES[2], pageWidth, contentY, contentHeight),
+      () => this.buildRulesPage(pageWidth, contentY, contentHeight, scale),
+      () => this.buildRoutePage(ROUTES[0], pageWidth, contentY, contentHeight, scale),
+      () => this.buildRoutePage(ROUTES[1], pageWidth, contentY, contentHeight, scale),
+      () => this.buildRoutePage(ROUTES[2], pageWidth, contentY, contentHeight, scale),
+      () => this.buildCpPage(pageWidth, contentY, contentHeight, scale),
     ];
 
     pageBuilders.forEach((build, i) => {
@@ -125,7 +113,8 @@ export class GuideScreen extends Phaser.Scene {
   private buildRulesPage(
     width: number,
     startY: number,
-    _height: number
+    _height: number,
+    scale: number
   ): Phaser.GameObjects.GameObject[] {
     const objs: Phaser.GameObjects.GameObject[] = [];
     let y = startY + 30;
@@ -133,19 +122,19 @@ export class GuideScreen extends Phaser.Scene {
     const heading = this.add
       .text(width / 2, y, "─  ル ー ル  ─", {
         fontFamily: SERIF,
-        fontSize: "22px",
+        fontSize: `${Math.round(22 * scale)}px`,
         color: "#aa8866",
         letterSpacing: 6,
       })
       .setOrigin(0.5);
     objs.push(heading);
-    y += 50;
+    y += Math.round(50 * scale);
 
     for (const rule of RULES) {
       const t = this.add
         .text(width / 2, y, `◆  ${rule}`, {
           fontFamily: SERIF,
-          fontSize: "17px",
+          fontSize: `${Math.round(17 * scale)}px`,
           color: "#bbccdd",
           letterSpacing: 2,
           wordWrap: { width: width - 80 },
@@ -153,7 +142,7 @@ export class GuideScreen extends Phaser.Scene {
         })
         .setOrigin(0.5, 0);
       objs.push(t);
-      y += t.height + 18;
+      y += t.height + Math.round(18 * scale);
     }
 
     return objs;
@@ -163,75 +152,211 @@ export class GuideScreen extends Phaser.Scene {
     route: (typeof ROUTES)[0],
     width: number,
     startY: number,
-    _height: number
+    height: number,
+    scale: number
   ): Phaser.GameObjects.GameObject[] {
     const objs: Phaser.GameObjects.GameObject[] = [];
-    let y = startY + 30;
+    const isMobile = height < 500;
 
-    const sectionLabel = this.add
-      .text(width / 2, y, "─  進 化 系 統  ─", {
-        fontFamily: SERIF,
-        fontSize: "20px",
-        color: "#aa8866",
-        letterSpacing: 6,
-      })
-      .setOrigin(0.5);
-    objs.push(sectionLabel);
-    y += 46;
+    if (!isMobile) {
+      /* PC: original single-column layout */
+      let y = startY + 30;
 
-    const header = this.add
-      .text(width / 2, y, route.name, {
-        fontFamily: SERIF,
-        fontSize: "28px",
-        color: route.color,
-        letterSpacing: 6,
-      })
-      .setOrigin(0.5);
-    if (header.postFX) {
-      header.postFX.addGlow(route.glowColor, 5, 0, false, 0.1, 10);
-    }
-    objs.push(header);
-    y += 46;
-
-    /* evolution chain — one shark per line with arrows */
-    for (let i = 0; i < route.sharks.length; i++) {
-      const shark = this.add
-        .text(width / 2, y, route.sharks[i], {
+      const sectionLabel = this.add
+        .text(width / 2, y, "─  進 化 系 統  ─", {
           fontFamily: SERIF,
-          fontSize: "19px",
-          color: "#ddeeff",
-          letterSpacing: 2,
+          fontSize: "20px",
+          color: "#aa8866",
+          letterSpacing: 6,
         })
         .setOrigin(0.5);
-      objs.push(shark);
-      y += 28;
+      objs.push(sectionLabel);
+      y += 46;
 
-      if (i < route.sharks.length - 1) {
-        const arrow = this.add
-          .text(width / 2, y, "↓", {
+      const header = this.add
+        .text(width / 2, y, route.name, {
+          fontFamily: SERIF,
+          fontSize: "28px",
+          color: route.color,
+          letterSpacing: 6,
+        })
+        .setOrigin(0.5);
+      if (header.postFX) {
+        header.postFX.addGlow(route.glowColor, 5, 0, false, 0.1, 10);
+      }
+      objs.push(header);
+      y += 46;
+
+      for (let i = 0; i < route.sharks.length; i++) {
+        const shark = this.add
+          .text(width / 2, y, route.sharks[i], {
             fontFamily: SERIF,
-            fontSize: "16px",
-            color: "#556677",
+            fontSize: "19px",
+            color: "#ddeeff",
+            letterSpacing: 2,
           })
           .setOrigin(0.5);
-        objs.push(arrow);
-        y += 24;
+        objs.push(shark);
+        y += 28;
+
+        if (i < route.sharks.length - 1) {
+          const arrow = this.add
+            .text(width / 2, y, "↓", {
+              fontFamily: SERIF,
+              fontSize: "16px",
+              color: "#556677",
+            })
+            .setOrigin(0.5);
+          objs.push(arrow);
+          y += 24;
+        }
       }
+
+      y += 20;
+
+      const desc = this.add
+        .text(width / 2, y, route.desc, {
+          fontFamily: SERIF,
+          fontSize: "16px",
+          color: "#bbccdd",
+          align: "center",
+          lineSpacing: 8,
+          wordWrap: { width: width - 80 },
+        })
+        .setOrigin(0.5, 0);
+      objs.push(desc);
+
+    } else {
+      /* Mobile: 2-column layout */
+      let y = startY + Math.round(20 * scale);
+
+      const header = this.add
+        .text(width / 2, y, route.name, {
+          fontFamily: SERIF,
+          fontSize: `${Math.round(28 * scale)}px`,
+          color: route.color,
+          letterSpacing: 6,
+        })
+        .setOrigin(0.5);
+      if (header.postFX) {
+        header.postFX.addGlow(route.glowColor, 5, 0, false, 0.1, 10);
+      }
+      objs.push(header);
+      y += Math.round(40 * scale);
+
+      const leftCenterX = width * 0.22;
+      const rightStartX = width * 0.46;
+      const rightWrapWidth = width - rightStartX - 20;
+
+      const dividerX = width * 0.42;
+      objs.push(
+        this.add
+          .graphics()
+          .lineStyle(1, 0x225588, 0.3)
+          .lineBetween(dividerX, y, dividerX, y + Math.round(180 * scale))
+      );
+
+      let chainY = y;
+      for (let i = 0; i < route.sharks.length; i++) {
+        const shark = this.add
+          .text(leftCenterX, chainY, route.sharks[i], {
+            fontFamily: SERIF,
+            fontSize: `${Math.round(17 * scale)}px`,
+            color: "#ddeeff",
+            letterSpacing: 2,
+          })
+          .setOrigin(0.5);
+        objs.push(shark);
+        chainY += Math.round(24 * scale);
+
+        if (i < route.sharks.length - 1) {
+          const arrow = this.add
+            .text(leftCenterX, chainY, "↓", {
+              fontFamily: SERIF,
+              fontSize: `${Math.round(14 * scale)}px`,
+              color: "#556677",
+            })
+            .setOrigin(0.5);
+          objs.push(arrow);
+          chainY += Math.round(18 * scale);
+        }
+      }
+
+      const desc = this.add
+        .text(rightStartX, y, route.desc, {
+          fontFamily: SERIF,
+          fontSize: `${Math.round(15 * scale)}px`,
+          color: "#bbccdd",
+          lineSpacing: Math.round(8 * scale),
+          wordWrap: { width: rightWrapWidth },
+        })
+        .setOrigin(0, 0);
+      objs.push(desc);
     }
 
-    y += 20;
+    return objs;
+  }
 
-    const desc = this.add
-      .text(width / 2, y, route.desc, {
-        fontFamily: SERIF,
-        fontSize: "16px",
-        color: "#bbccdd",
-        align: "center",
-        lineSpacing: 8,
-        wordWrap: { width: width - 80 },
-      })
-      .setOrigin(0.5, 0);
-    objs.push(desc);
+  private buildCpPage(
+    width: number,
+    startY: number,
+    height: number,
+    scale: number
+  ): Phaser.GameObjects.GameObject[] {
+    const objs: Phaser.GameObjects.GameObject[] = [];
+    const isMobile = height < 500;
+    const s = scale;
+    let y = startY + Math.round((isMobile ? 16 : 30) * s);
+
+    const addText = (
+      text: string,
+      size: number,
+      color: string,
+      gap: number,
+      opts: Partial<Phaser.Types.GameObjects.Text.TextStyle> = {}
+    ) => {
+      const t = this.add
+        .text(width / 2, y, text, {
+          fontFamily: SERIF,
+          fontSize: `${Math.round(size * s)}px`,
+          color,
+          wordWrap: { width: width - 60 },
+          align: "center",
+          ...opts,
+        })
+        .setOrigin(0.5, 0);
+      objs.push(t);
+      y += t.height + Math.round(gap * s);
+      return t;
+    };
+
+    const heading = addText("─  C P  に つ い て  ─", 22, "#88ccee", isMobile ? 24 : 40, { letterSpacing: 6 });
+    if (heading.postFX) heading.postFX.addGlow(0x225588, 4, 0, false, 0.1, 10);
+
+    if (isMobile) {
+      addText("ダッシュで消費する資源。尽きるとダッシュ不能になる。\n現実世界を歩くことで補充できる。", 13, "#7799bb", 16);
+    } else {
+      addText("ダッシュで消費する資源。CP が尽きるとダッシュ不能になる。", 15, "#7799bb", 6);
+      addText("現実世界を歩くことで CP を補充できる。", 15, "#7799bb", 28);
+    }
+
+    addText("◆  ダッシュ消費量", isMobile ? 15 : 17, "#aabbcc", isMobile ? 8 : 14, { letterSpacing: 2 });
+    if (isMobile) {
+      addText("攻撃系 4.0/秒  ／  深海魚系 3.0/秒  ／  非攻撃系 2.0/秒", 12, "#7799bb", isMobile ? 16 : 28);
+    } else {
+      addText("攻撃系  4.0 / 秒    深海魚系  3.0 / 秒    非攻撃系  2.0 / 秒", 15, "#7799bb", 28);
+    }
+
+    addText("◆  CP の貯め方", isMobile ? 15 : 17, "#aabbcc", isMobile ? 8 : 14, { letterSpacing: 2 });
+    const steps = [
+      "① ホームの「CP 獲得」へ進む",
+      "② スタートを押して実際に歩く",
+      "③ 歩いた距離に応じて CP が付与される",
+      "④ ストップで結果を確定する",
+    ];
+    for (const step of steps) {
+      addText(step, isMobile ? 13 : 15, "#7799bb", isMobile ? 5 : 10);
+    }
 
     return objs;
   }
@@ -275,6 +400,26 @@ export class GuideScreen extends Phaser.Scene {
     this.nextBtn.on("pointerover", () => this.nextBtn.setColor("#88bbdd"));
     this.nextBtn.on("pointerout", () => this.nextBtn.setColor("#6688aa"));
     this.nextBtn.on("pointerdown", () => this.goToPage(this.currentPage + 1));
+
+    const homeBtn = this.add
+      .text(16, y, "ホームへ", {
+        fontFamily: SERIF,
+        fontSize: "16px",
+        color: "#6688aa",
+      })
+      .setOrigin(0, 0.5)
+      .setDepth(10)
+      .setInteractive({ useHandCursor: true });
+
+    homeBtn.on("pointerover", () => {
+      homeBtn.setColor("#88bbdd");
+      if (homeBtn.postFX) homeBtn.postFX.addGlow(0x225588, 6, 0, false, 0.2, 12);
+    });
+    homeBtn.on("pointerout", () => {
+      homeBtn.setColor("#6688aa");
+      if (homeBtn.postFX) homeBtn.postFX.clear();
+    });
+    homeBtn.on("pointerdown", () => this.scene.start("HomeScreen"));
 
     /* footer separator */
     this.add

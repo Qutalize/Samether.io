@@ -14,8 +14,6 @@ const UPDATE_INTERVAL_MS = 5_000;
 type Phase = "idle" | "connecting" | "measuring" | "done";
 
 export class CPScreen extends Phaser.Scene {
-  private titleText!: Phaser.GameObjects.Text;
-  private lineGfx!: Phaser.GameObjects.Graphics;
   private instructionText!: Phaser.GameObjects.Text;
   private backBtn!: Phaser.GameObjects.Text;
   private cpDisplayText!: Phaser.GameObjects.Text;
@@ -43,7 +41,6 @@ export class CPScreen extends Phaser.Scene {
 
   /** サーバーから受け取った最新値 */
   private estimatedDist = 0;
-  private pointsRecorded = 0;
 
   constructor() {
     super({ key: "CPScreen" });
@@ -56,15 +53,6 @@ export class CPScreen extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBackgroundColor("#030a14");
 
-    this.titleText = this.add.text(0, 0, "C P  獲 得", {
-      fontFamily: SERIF,
-      fontSize: "52px",
-      color: "#88ccee",
-      letterSpacing: 10,
-    }).setOrigin(0.5);
-
-    this.lineGfx = this.add.graphics();
-
     this.cpDisplayText = this.add.text(0, 0, `所持 CP: ${loadCp()}`, {
       fontFamily: SERIF,
       fontSize: "22px",
@@ -74,7 +62,7 @@ export class CPScreen extends Phaser.Scene {
     this.instructionText = this.add.text(
       0,
       0,
-      "[ スタート ] を押して歩くと自動で CP が貯まります\n50m 移動ごとに 1 CP",
+      "[ スタート ] を押して歩くと自動で CP が貯まります",
       {
         fontFamily: SERIF,
         fontSize: "15px",
@@ -132,24 +120,12 @@ export class CPScreen extends Phaser.Scene {
   }
 
   private layout(width: number, height: number): void {
-    this.titleText.setPosition(width / 2, height * 0.05);
-
-    const lineW = width * 0.45;
-    const lineX = (width - lineW) / 2;
-    const lineY = height * 0.09;
-    this.lineGfx.clear();
-    this.lineGfx.lineStyle(1, 0x225588, 0.4);
-    this.lineGfx.beginPath();
-    this.lineGfx.moveTo(lineX, lineY);
-    this.lineGfx.lineTo(lineX + lineW, lineY);
-    this.lineGfx.strokePath();
-
-    this.cpDisplayText.setPosition(width / 2, height * 0.13);
-    this.instructionText.setPosition(width / 2, height * 0.63);
-    this.statusText.setPosition(width / 2, height * 0.70);
-    this.distText.setPosition(width / 2, height * 0.76);
-    this.startBtn.setPosition(width / 2, height * 0.83);
-    this.goalBtn.setPosition(width / 2, height * 0.83);
+    this.instructionText.setPosition(width / 2, height * 0.62);
+    this.statusText.setPosition(width / 2, height * 0.68);
+    this.distText.setPosition(width / 2, height * 0.74);
+    this.cpDisplayText.setPosition(width / 2, height * 0.80);
+    this.startBtn.setPosition(width / 2, height * 0.86);
+    this.goalBtn.setPosition(width / 2, height * 0.86);
     this.backBtn.setPosition(width / 2, height * 0.93);
   }
 
@@ -178,9 +154,8 @@ export class CPScreen extends Phaser.Scene {
       case "cp_progress": {
         const p = msg.payload;
         this.estimatedDist = p.estimatedDist;
-        this.pointsRecorded = p.pointsRecorded;
         this.distText.setText(
-          `距離: ${Math.round(this.estimatedDist)} m  (${this.pointsRecorded} 点記録)`,
+          `距離: ${Math.round(this.estimatedDist)} m`,
         );
         break;
       }
@@ -237,7 +212,6 @@ export class CPScreen extends Phaser.Scene {
     this.applyPhase();
     this.setStatus("接続中...", "#ffdd44");
     this.estimatedDist = 0;
-    this.pointsRecorded = 0;
     this.trackCoords = [];
     this.distText.setText("");
 
@@ -314,7 +288,7 @@ export class CPScreen extends Phaser.Scene {
     const container = document.createElement("div");
     container.id = "cp-map";
     container.style.cssText =
-      "position:fixed;top:18%;left:50%;transform:translateX(-50%);width:45%;height:40%;z-index:10;border-radius:8px;border:1px solid #225588;";
+      "position:fixed;top:5%;left:50%;transform:translateX(-50%);width:72%;height:55%;z-index:10;border-radius:8px;border:1px solid #225588;";
     document.body.appendChild(container);
 
     // まず現在地を1回取得してから地図を初期化する
