@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { net } from "../../network/websocket";
 import { SharkRoute } from "../../network/protocol";
-import { loadCp } from "../../storage/cp";
+import { loadDailyDistance } from "../../storage/cp";
 import { getSession, logout } from "../../storage/auth";
 import { styledButton } from "../styledButton";
 
@@ -53,7 +53,7 @@ export class HomeScreen extends Phaser.Scene {
 
     this.createRouteButtons();
 
-    this.cpText = this.add.text(0, 0, `所持 CP: ${loadCp()}`, {
+    this.cpText = this.add.text(0, 0, `本日の歩行距離: ${Math.round(loadDailyDistance())}m`, {
       fontFamily: SERIF,
       fontSize: "18px",
       color: "#6688aa",
@@ -64,7 +64,7 @@ export class HomeScreen extends Phaser.Scene {
 
     this.input.keyboard?.on("keydown-ENTER", () => this.tryStart());
 
-    this.cpBtn = styledButton(this,"─  C P 獲 得  ─", "22px", "#ffaa44", "#ffcc88", 0xaa7722, 6);
+    this.cpBtn = styledButton(this,"─  歩 行 記 録  ─", "22px", "#ffaa44", "#ffcc88", 0xaa7722, 6);
     this.cpBtn.on("pointerdown", () => this.scene.start("CPScreen"));
 
     this.guideBtn = styledButton(this,"─  ガイド  ─", "20px", "#6688aa", "#88bbdd", 0x446688, 6);
@@ -105,7 +105,7 @@ export class HomeScreen extends Phaser.Scene {
     this.lineGfx.strokePath();
 
     this.layoutRouteButtons(width / 2, height * 0.48);
-    this.cpText.setPosition(width / 2, height * 0.58).setText(`所持 CP: ${loadCp()}`);
+    this.cpText.setPosition(width / 2, height * 0.58).setText(`本日の歩行距離: ${Math.round(loadDailyDistance())}m`);
     this.playBtn.setPosition(width / 2, height * 0.65);
     this.cpBtn.setPosition(width / 2, height * 0.73);
     this.guideBtn.setPosition(width / 2, height * 0.81);
@@ -167,7 +167,7 @@ export class HomeScreen extends Phaser.Scene {
   private async tryStart(): Promise<void> {
     try {
       if (!net.isOpen()) await net.connect();
-      net.send({ type: "join", payload: { name: this.playerName, route: this.selectedRoute } });
+      net.send({ type: "join", payload: { name: this.playerName, route: this.selectedRoute, dailyDistance: loadDailyDistance() } });
       this.scene.start("GameScene", { name: this.playerName, route: this.selectedRoute });
     } catch (e) {
       console.error("connect failed", e);

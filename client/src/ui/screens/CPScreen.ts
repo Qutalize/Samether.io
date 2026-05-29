@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { CPNetClient } from "../../network/cp-websocket";
-import { loadCp, setCp } from "../../storage/cp";
+import { loadDailyDistance, addDailyDistance, calcMaxCp } from "../../storage/cp";
 import type { ServerMsg } from "../../network/protocol";
 import { styledButton } from "../styledButton";
 
@@ -41,6 +41,7 @@ export class CPScreen extends Phaser.Scene {
 
   /** サーバーから受け取った最新値 */
   private estimatedDist = 0;
+  private pointsRecorded = 0;
 
   constructor() {
     super({ key: "CPScreen" });
@@ -53,7 +54,7 @@ export class CPScreen extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBackgroundColor("#030a14");
 
-    this.cpDisplayText = this.add.text(0, 0, `所持 CP: ${loadCp()}`, {
+    this.cpDisplayText = this.add.text(0, 0, `本日の歩行距離: ${Math.round(loadDailyDistance())}m`, {
       fontFamily: SERIF,
       fontSize: "22px",
       color: "#6688aa",
@@ -62,7 +63,7 @@ export class CPScreen extends Phaser.Scene {
     this.instructionText = this.add.text(
       0,
       0,
-      "[ スタート ] を押して歩くと自動で CP が貯まります",
+      "[ スタート ] を押して歩くと MaxCP が上昇します",
       {
         fontFamily: SERIF,
         fontSize: "15px",
@@ -113,10 +114,6 @@ export class CPScreen extends Phaser.Scene {
     this.cpNet.onMessage(this.msgHandler);
     this.cpNet.onClose(this.closeHandler);
 
-    /* 画面表示時にサーバーから最新CP残高を取得 */
-    if (this.cpNet.isOpen()) {
-      this.cpNet.send({ type: "cp_balance", payload: {} });
-    }
   }
 
   private layout(width: number, height: number): void {
@@ -154,8 +151,9 @@ export class CPScreen extends Phaser.Scene {
       case "cp_progress": {
         const p = msg.payload;
         this.estimatedDist = p.estimatedDist;
+        this.pointsRecorded = p.pointsRecorded;
         this.distText.setText(
-          `距離: ${Math.round(this.estimatedDist)} m`,
+          `距離: ${Math.round(this.estimatedDist)} m  (${this.pointsRecorded} 点記録)`,
         );
         break;
       }
@@ -165,14 +163,14 @@ export class CPScreen extends Phaser.Scene {
         this.phase = "done";
         this.applyPhase();
         this.stopWatching();
+        const newTotal = addDailyDistance(r.distance);
+        const newMaxCp = calcMaxCp(newTotal);
         this.setStatus(
-          `距離: ${Math.round(r.distance)} m  /  +${r.earned} CP\n合計 ${r.total} CP`,
+          `歩行距離: ${Math.round(r.distance)}m → MaxCP: ${newMaxCp} に上昇`,
           "#44ff88",
         );
         this.distText.setText("");
-        setCp(r.total);
-        this.cpDisplayText.setText(`所持 CP: ${r.total}`);
-        // 軌跡をまとめて描画
+        this.cpDisplayText.setText(`本日の歩行距離: ${Math.round(newTotal)}m`);
         if (r.positions && r.positions.length > 0) {
           this.trackCoords = r.positions.map((p) => [p.lon, p.lat] as [number, number]);
           this.drawTrack();
@@ -190,10 +188,6 @@ export class CPScreen extends Phaser.Scene {
         break;
       }
 
-      case "cp_balance_result":
-        setCp(msg.payload.total);
-        this.cpDisplayText.setText(`所持 CP: ${msg.payload.total}`);
-        break;
     }
   }
 
@@ -212,6 +206,7 @@ export class CPScreen extends Phaser.Scene {
     this.applyPhase();
     this.setStatus("接続中...", "#ffdd44");
     this.estimatedDist = 0;
+    this.pointsRecorded = 0;
     this.trackCoords = [];
     this.distText.setText("");
 

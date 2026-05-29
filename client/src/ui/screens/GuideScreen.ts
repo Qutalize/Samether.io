@@ -334,10 +334,10 @@ export class GuideScreen extends Phaser.Scene {
     if (heading.postFX) heading.postFX.addGlow(0x225588, 4, 0, false, 0.1, 10);
 
     if (isMobile) {
-      addText("ダッシュで消費する資源。尽きるとダッシュ不能になる。\n現実世界を歩くことで補充できる。", 13, "#7799bb", 16);
+      addText("ダッシュで消費する資源。尽きるとダッシュ不能になる。\n現実世界を歩いた距離がゲーム開始時の MaxCP を決定する。", 13, "#7799bb", 16);
     } else {
       addText("ダッシュで消費する資源。CP が尽きるとダッシュ不能になる。", 15, "#7799bb", 6);
-      addText("現実世界を歩くことで CP を補充できる。", 15, "#7799bb", 28);
+      addText("現実世界を歩いた距離がゲーム開始時の MaxCP を決定する。", 15, "#7799bb", 28);
     }
 
     addText("◆  ダッシュ消費量", isMobile ? 15 : 17, "#aabbcc", isMobile ? 8 : 14, { letterSpacing: 2 });
@@ -347,15 +347,17 @@ export class GuideScreen extends Phaser.Scene {
       addText("攻撃系  4.0 / 秒    深海魚系  3.0 / 秒    非攻撃系  2.0 / 秒", 15, "#7799bb", 28);
     }
 
-    addText("◆  CP の貯め方", isMobile ? 15 : 17, "#aabbcc", isMobile ? 8 : 14, { letterSpacing: 2 });
-    const steps = [
-      "① ホームの「CP 獲得」へ進む",
-      "② スタートを押して実際に歩く",
-      "③ 歩いた距離に応じて CP が付与される",
-      "④ ストップで結果を確定する",
+    addText("◆  本日の歩行距離と MaxCP", isMobile ? 15 : 17, "#aabbcc", isMobile ? 8 : 14, { letterSpacing: 2 });
+    const tiers = [
+      "0 〜 200m   → MaxCP  10",
+      "201 〜 500m → MaxCP  20",
+      "501 〜 999m → MaxCP  30",
+      "1km 〜      → MaxCP  50",
+      "2km 〜      → MaxCP  80",
+      "3km 以上    → MaxCP 100",
     ];
-    for (const step of steps) {
-      addText(step, isMobile ? 13 : 15, "#7799bb", isMobile ? 5 : 10);
+    for (const tier of tiers) {
+      addText(tier, isMobile ? 12 : 14, "#7799bb", isMobile ? 4 : 8);
     }
 
     return objs;
