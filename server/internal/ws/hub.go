@@ -325,8 +325,10 @@ func (h *Hub) handleInbound(m inboundMsg) {
 				bonusMaxCP = 80
 			case dailyDist >= 1000:
 				bonusMaxCP = 50
-			case dailyDist >= 500:
+			case dailyDist >= 501:
 				bonusMaxCP = 30
+			case dailyDist >= 201:
+				bonusMaxCP = 20
 			default:
 				bonusMaxCP = 10
 			}
