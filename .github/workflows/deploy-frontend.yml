@@ -43,4 +43,4 @@ jobs:
         run: aws s3 sync client/dist/ s3://samether-dev-frontend-assets/ --delete
 
       - name: Invalidate CloudFront
-        run: aws cloudfront create-invalidation --distribution-id EG5JCHONTHWZ1 --paths "/*" #変更
+        run: aws cloudfront create-invalidation --distribution-id E103UZ2786IGBW --paths "/*" #変更
